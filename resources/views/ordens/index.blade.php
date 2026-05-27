@@ -9,7 +9,10 @@
         </div>
     </x-slot>
 
-    <div class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div
+        x-data="{ deleteModalOpen: false, deleteAction: '', deleteLabel: '' }"
+        class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+    >
 
         {{-- Alertas --}}
         @if(session('success'))
@@ -138,8 +141,21 @@
                                         </button>
                                     </form>
 
-                                <a href="{{ route('ordens.show', $ordem) }}"
-                                   class="text-[#0c5f3a] hover:text-[#ff7a00] hover:underline text-xs">Ver</a>
+                                    <a href="{{ route('ordens.show', $ordem) }}"
+                                       class="text-[#0c5f3a] hover:text-[#ff7a00] hover:underline text-xs">Ver</a>
+
+                                    <button type="button"
+                                            title="Excluir ordem de serviÃ§o"
+                                            x-on:click="deleteModalOpen = true; deleteAction = @js(route('ordens.destroy', $ordem)); deleteLabel = @js('OS #' . $ordem->id . ' - ' . $ordem->cliente_nome)"
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 6V4h8v2"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14H6L5 6"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+                                        </svg>
+                                        <span class="sr-only">Excluir OS</span>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -155,5 +171,38 @@
         </div>
 
         <div class="mt-4">{{ $ordens->links() }}</div>
+
+        <div
+            x-show="deleteModalOpen"
+            x-cloak
+            x-transition.opacity
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+        >
+            <div
+                x-show="deleteModalOpen"
+                x-transition
+                x-on:click.outside="deleteModalOpen = false"
+                class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+            >
+                <h3 class="text-lg font-semibold text-gray-900">Excluir ordem de serviço?</h3>
+                <p class="mt-2 text-sm text-gray-600">
+                    Esta ação vai remover definitivamente <span class="font-semibold" x-text="deleteLabel"></span>.
+                </p>
+
+                <form method="POST" x-bind:action="deleteAction" class="mt-6 flex justify-end gap-3">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button"
+                            x-on:click="deleteModalOpen = false"
+                            class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </x-app-layout>

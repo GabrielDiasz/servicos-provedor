@@ -74,7 +74,7 @@ class OrdemServicoController extends Controller
 
         $ordem = OrdemServico::create($validated);
 
-        return redirect()->route('ordens.show', ['ordem' => $ordem->id])
+        return redirect()->route('ordens.index')
             ->with('success', 'Ordem de serviço criada com sucesso!');
     }
 
