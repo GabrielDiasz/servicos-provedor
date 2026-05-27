@@ -3,23 +3,30 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\WhatsAppGrupo;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        User::updateOrCreate([
+            'email' => env('ADMIN_EMAIL', 'admin@gpr.com'),
+        ], [
+            'name' => env('ADMIN_NAME', 'Administrador'),
+            'perfil' => 'admin',
+            'password' => Hash::make(env('ADMIN_PASSWORD', '12345678')),
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        WhatsAppGrupo::updateOrCreate([
+            'grupo_id' => env('WHATSAPP_TEST_GROUP_ID', '120363428623245389@g.us'),
+        ], [
+            'nome' => env('WHATSAPP_TEST_GROUP_NAME', 'Grupo de Teste'),
+            'ativo' => true,
         ]);
     }
 }

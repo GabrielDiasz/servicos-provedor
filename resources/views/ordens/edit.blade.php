@@ -20,15 +20,29 @@
                 @csrf
                 @method('PUT')
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Link do cliente no SGP</label>
+                    <div class="flex gap-2">
+                        <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link', $ordem->sgp_cliente_link) }}"
+                               placeholder="https://gpr.sgp.net.br/admin/cliente/3176/edit/"
+                               class="flex-1 border rounded-lg px-3 py-2 text-sm">
+                        <button type="button" id="buscar-sgp"
+                                class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">
+                            Buscar
+                        </button>
+                    </div>
+                    <p id="sgp-feedback" class="text-xs text-gray-400 mt-1">Cole o link do cliente no SGP para preencher os dados principais.</p>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
-                        <input type="text" name="cliente_nome" value="{{ old('cliente_nome', $ordem->cliente_nome) }}"
+                        <input type="text" name="cliente_nome" id="cliente_nome" value="{{ old('cliente_nome', $ordem->cliente_nome) }}"
                                class="w-full border rounded-lg px-3 py-2 text-sm" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
-                        <input type="text" name="cliente_telefone" value="{{ old('cliente_telefone', $ordem->cliente_telefone) }}"
+                        <input type="text" name="cliente_telefone" id="cliente_telefone" value="{{ old('cliente_telefone', $ordem->cliente_telefone) }}"
                                class="w-full border rounded-lg px-3 py-2 text-sm" required>
                     </div>
                 </div>
@@ -36,7 +50,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Bairro *</label>
-                        <input type="text" name="bairro" value="{{ old('bairro', $ordem->bairro) }}"
+                        <input type="text" name="bairro" id="bairro" value="{{ old('bairro', $ordem->bairro) }}"
                                class="w-full border rounded-lg px-3 py-2 text-sm" required>
                     </div>
                     <div>
@@ -120,4 +134,42 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.getElementById('buscar-sgp')?.addEventListener('click', async () => {
+            const feedback = document.getElementById('sgp-feedback');
+            const link = document.getElementById('sgp_cliente_link').value;
+
+            feedback.textContent = 'Buscando cliente no SGP...';
+            feedback.className = 'text-xs text-gray-500 mt-1';
+
+            try {
+                const response = await fetch('{{ route('ordens.buscar-sgp') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: JSON.stringify({ sgp_cliente_link: link }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Cliente não encontrado no SGP.');
+                }
+
+                document.getElementById('cliente_nome').value = data.cliente_nome || '';
+                document.getElementById('cliente_telefone').value = data.cliente_telefone || '';
+                document.getElementById('bairro').value = data.bairro || '';
+
+                feedback.textContent = `Cliente encontrado: ID ${data.sgp_cliente_id || '-'} | Contrato ${data.sgp_contrato_id || '-'}`;
+                feedback.className = 'text-xs text-green-600 mt-1';
+            } catch (error) {
+                feedback.textContent = error.message;
+                feedback.className = 'text-xs text-red-600 mt-1';
+            }
+        });
+    </script>
 </x-app-layout>

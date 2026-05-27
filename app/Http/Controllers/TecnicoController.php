@@ -3,19 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tecnico;
+use App\Models\WhatsAppGrupo;
 use Illuminate\Http\Request;
 
 class TecnicoController extends Controller
 {
     public function index()
     {
-        $tecnicos = Tecnico::orderBy('nome')->paginate(20);
+        $tecnicos = Tecnico::with('whatsappGrupo')->orderBy('nome')->paginate(20);
         return view('tecnicos.index', compact('tecnicos'));
     }
 
     public function create()
     {
-        return view('tecnicos.create');
+        $whatsappGrupos = WhatsAppGrupo::where('ativo', true)->orderBy('nome')->get();
+
+        return view('tecnicos.create', compact('whatsappGrupos'));
     }
 
     public function store(Request $request)
@@ -23,6 +26,7 @@ class TecnicoController extends Controller
         $validated = $request->validate([
             'nome'     => 'required|string|max:255',
             'telefone' => 'required|string|max:20',
+            'whatsapp_grupo_id' => 'required|exists:whatsapp_grupos,id',
         ]);
 
         Tecnico::create($validated);
@@ -33,7 +37,9 @@ class TecnicoController extends Controller
 
     public function edit(Tecnico $tecnico)
     {
-        return view('tecnicos.edit', compact('tecnico'));
+        $whatsappGrupos = WhatsAppGrupo::where('ativo', true)->orderBy('nome')->get();
+
+        return view('tecnicos.edit', compact('tecnico', 'whatsappGrupos'));
     }
 
     public function update(Request $request, Tecnico $tecnico)
@@ -41,6 +47,7 @@ class TecnicoController extends Controller
         $validated = $request->validate([
             'nome'     => 'required|string|max:255',
             'telefone' => 'required|string|max:20',
+            'whatsapp_grupo_id' => 'required|exists:whatsapp_grupos,id',
             'ativo'    => 'boolean',
         ]);
 

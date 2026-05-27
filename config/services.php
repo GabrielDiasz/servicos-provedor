@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'enabled' => env('WHATSAPP_ENABLED', true),
+        'url' => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3000'),
+        'token' => env('WHATSAPP_TOKEN'),
+        'timeout' => env('WHATSAPP_TIMEOUT', 10),
+    ],
+
+    'sgp' => [
+        'enabled' => env('SGP_ENABLED', true),
+        'url' => env('SGP_BASE_URL', 'https://gpr.sgp.net.br'),
+        'app' => env('SGP_APP'),
+        'token' => env('SGP_TOKEN'),
+        'timeout' => env('SGP_TIMEOUT', 15),
+    ],
+
 ];

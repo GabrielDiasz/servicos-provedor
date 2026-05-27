@@ -2,36 +2,36 @@
 
 use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\TecnicoController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\WhatsAppGrupoController;
 use Illuminate\Support\Facades\Route;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 Route::get('/', function () {
     return redirect()->route('ordens.index');
 });
 
 Route::middleware(['auth'])->group(function () {
-
     Route::get('/dashboard', function () {
         return redirect()->route('ordens.index');
     })->name('dashboard');
 
-    // Ordens de Serviço
-    Route::resource('ordens', OrdemServicoController::class);
+    Route::post('ordens/{ordem}/enviar-whatsapp', [OrdemServicoController::class, 'enviarWhatsApp'])
+        ->name('ordens.enviar-whatsapp');
 
-    // Técnicos
-    Route::resource('tecnicos', TecnicoController::class)->except(['show']);
-});
+    Route::post('ordens/buscar-sgp', [OrdemServicoController::class, 'buscarSgp'])
+        ->name('ordens.buscar-sgp');
 
-//Criar usuário admin com senha bcrypt
-Route::get('/criar-admin', function () {
-
-    User::create([
-        'name' => 'Administrador',
-        'email' => 'admin@gpr.com',
-        'password' => Hash::make('12345678'),
+    Route::resource('ordens', OrdemServicoController::class)->parameters([
+        'ordens' => 'ordem',
     ]);
 
-    return 'Usuário admin criado com sucesso!';
+    Route::resource('tecnicos', TecnicoController::class)->except(['show']);
+
+    Route::resource('whatsapp-grupos', WhatsAppGrupoController::class)->except(['show']);
+
+    Route::resource('usuarios', UserController::class)
+        ->except(['show'])
+        ->middleware('can:gerenciar-usuarios');
 });
+
 require __DIR__ . '/auth.php';

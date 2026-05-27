@@ -12,6 +12,17 @@ class OrdemServico extends Model
     protected $fillable = [
         'cliente_nome',
         'cliente_telefone',
+        'sgp_cliente_link',
+        'sgp_cliente_id',
+        'sgp_contrato_id',
+        'sgp_cpf_cnpj',
+        'sgp_data_nascimento',
+        'sgp_plano',
+        'sgp_vencimento',
+        'sgp_pppoe_login',
+        'sgp_pppoe_senha',
+        'sgp_endereco',
+        'sgp_dados',
         'bairro',
         'tipo_servico',
         'turno',
@@ -25,6 +36,8 @@ class OrdemServico extends Model
 
     protected $casts = [
         'data_marcacao' => 'date',
+        'sgp_data_nascimento' => 'date',
+        'sgp_dados' => 'array',
     ];
 
     // Labels para exibição na tela
