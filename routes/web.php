@@ -18,6 +18,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('ordens/{ordem}/enviar-whatsapp', [OrdemServicoController::class, 'enviarWhatsApp'])
         ->name('ordens.enviar-whatsapp');
 
+    Route::patch('ordens/{ordem}/status', [OrdemServicoController::class, 'atualizarStatus'])
+        ->name('ordens.atualizar-status');
+
     Route::post('ordens/buscar-sgp', [OrdemServicoController::class, 'buscarSgp'])
         ->name('ordens.buscar-sgp');
 

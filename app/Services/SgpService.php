@@ -185,6 +185,12 @@ class SgpService
             $endereco['uf'] ?? null,
         ])));
 
-        return $logradouro ?: null;
+        $extras = trim(implode(', ', array_filter([
+            isset($endereco['complemento']) && $endereco['complemento'] !== '' ? 'Complemento: ' . $endereco['complemento'] : null,
+            isset($endereco['pontoreferencia']) && $endereco['pontoreferencia'] !== '' ? 'Referência: ' . $endereco['pontoreferencia'] : null,
+            isset($endereco['ponto_referencia']) && $endereco['ponto_referencia'] !== '' ? 'Referência: ' . $endereco['ponto_referencia'] : null,
+        ])));
+
+        return trim(implode(', ', array_filter([$logradouro, $extras]))) ?: null;
     }
 }

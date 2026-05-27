@@ -62,33 +62,188 @@ class WhatsAppService
     {
         $tipo = OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico;
         $observacao = trim((string) $ordem->observacao);
-        $servicosCompletos = ['instalacao', 'upgrade', 'mudanca_endereco', 'desconectado'];
+        $servicosCompletos = ['instalacao', 'reativacao', 'mudanca_endereco', 'upgrade'];
+        $login = $this->loginPppoe($ordem);
 
         if (in_array($ordem->tipo_servico, $servicosCompletos, true)) {
-            return [collect([
-                mb_strtoupper($tipo),
-                '',
-                $ordem->cliente_nome,
-                $ordem->sgp_contrato_id,
-                '',
-                $ordem->sgp_cpf_cnpj ? "Titular: {$ordem->cliente_nome}" : null,
-                $ordem->sgp_data_nascimento ? 'Data de nascimento: ' . $ordem->sgp_data_nascimento->format('d/m/Y') : null,
-                $ordem->sgp_cpf_cnpj ? "CPF: {$ordem->sgp_cpf_cnpj}" : null,
-                "Tel: {$ordem->cliente_telefone}",
-                $ordem->sgp_plano ? "Nome do plano {$ordem->sgp_plano}" : null,
-                $ordem->sgp_pppoe_login ? "Login PPPoE: {$ordem->sgp_pppoe_login}" : null,
-                $ordem->sgp_pppoe_senha ? "Senha PPPoE: {$ordem->sgp_pppoe_senha}" : null,
-                $ordem->sgp_vencimento ? "Vencimento: {$ordem->sgp_vencimento}" : null,
-                $observacao !== '' ? "Observacao: {$observacao}" : null,
-            ])->filter(fn ($linha) => $linha !== null)->implode("\n")];
+            return collect([
+                $this->mensagemServicoEndereco($ordem, $tipo, $observacao),
+                $login,
+                $ordem->sgp_pppoe_senha,
+                $this->mensagemDadosCliente($ordem),
+                $this->telefonePrincipal($ordem),
+            ])->filter()->values()->all();
         }
 
         return collect([
-            trim(mb_strtoupper($tipo) . ($observacao !== '' ? " - {$observacao}" : '')),
-            $ordem->cliente_nome,
-            $ordem->sgp_pppoe_login ? "Login: {$ordem->sgp_pppoe_login}" : null,
-            $ordem->sgp_pppoe_senha ? "Senha: {$ordem->sgp_pppoe_senha}" : null,
-            $ordem->cliente_telefone,
+            $this->mensagemServicoEndereco($ordem, $tipo, $observacao),
+            $login,
+            $ordem->sgp_pppoe_senha,
+            $this->mensagemCtoPorta($ordem),
+            $this->telefonePrincipal($ordem),
         ])->filter()->values()->all();
+    }
+
+    private function mensagemDadosCliente(OrdemServico $ordem): string
+    {
+        $telefones = $this->telefonesFormatados($ordem);
+
+        return collect([
+            "Titular: {$ordem->cliente_nome}",
+            $ordem->sgp_data_nascimento ? 'Data de nascimento: ' . $ordem->sgp_data_nascimento->format('d/m/Y') : null,
+            $ordem->sgp_cpf_cnpj ? "CPF: {$ordem->sgp_cpf_cnpj}" : null,
+            $telefones ? 'Tel :        ' . implode('        ', $telefones) : null,
+            $ordem->sgp_plano ? 'Nome do plano ' . $this->planoMensagem($ordem->sgp_plano) : null,
+            $ordem->sgp_plano ? 'velocidade kbps: ' . $this->velocidadeKbps($ordem->sgp_plano) : null,
+            '',
+            $this->valorPlano($ordem) ? 'Valor do plano: ' . $this->valorPlano($ordem) : null,
+            $ordem->sgp_vencimento ? "Vencimento: {$ordem->sgp_vencimento}" : null,
+        ])->filter(fn ($linha) => $linha !== null)->implode("\n");
+    }
+
+    private function mensagemEndereco(OrdemServico $ordem): ?string
+    {
+        $endereco = $this->enderecoSgp($ordem);
+
+        if (! $endereco) {
+            return $ordem->sgp_endereco;
+        }
+
+        return collect([
+            ! empty($endereco['logradouro']) ? "Endereço: {$endereco['logradouro']}" : null,
+            isset($endereco['numero']) && $endereco['numero'] !== '' ? "Número: {$endereco['numero']}" : null,
+            ! empty($endereco['bairro']) ? "Bairro: {$endereco['bairro']}" : null,
+            ! empty($endereco['complemento']) ? "Complemento: {$endereco['complemento']}" : null,
+            ! empty($endereco['pontoreferencia']) ? "Referência: {$endereco['pontoreferencia']}" : null,
+            ! empty($endereco['ponto_referencia']) ? "Referência: {$endereco['ponto_referencia']}" : null,
+        ])->filter()->implode("\n");
+    }
+
+    private function mensagemServicoEndereco(OrdemServico $ordem, string $tipo, string $observacao = ''): ?string
+    {
+        return collect([
+            trim(mb_strtoupper($tipo) . ($observacao !== '' ? " - {$observacao}" : '')),
+            '',
+            $this->mensagemEndereco($ordem),
+        ])->filter(fn ($linha) => $linha !== null)->implode("\n");
+    }
+
+    private function mensagemCtoPorta(OrdemServico $ordem): ?string
+    {
+        $onu = $this->onuSgp($ordem);
+        $cto = data_get($onu, 'splitter.nome');
+        $porta = data_get($onu, 'splitter.porta');
+
+        if (! $cto) {
+            return null;
+        }
+
+        return 'CTO: ' . $cto . ' Porta: ' . ($porta ?: 'sem porta');
+    }
+
+    private function nomeMensagem(OrdemServico $ordem): string
+    {
+        return str_replace(' ', '_', mb_strtoupper($ordem->cliente_nome));
+    }
+
+    private function loginPppoe(OrdemServico $ordem): ?string
+    {
+        return $ordem->sgp_pppoe_login ? mb_strtoupper($ordem->sgp_pppoe_login) : null;
+    }
+
+    private function planoMensagem(?string $plano): ?string
+    {
+        return $plano ? preg_replace('/\s+/', '', $plano) : null;
+    }
+
+    private function velocidadeKbps(?string $plano): ?string
+    {
+        $plano = mb_strtoupper((string) $plano);
+
+        return match (true) {
+            str_contains($plano, '300') => '310200',
+            str_contains($plano, '500') => '500200',
+            str_contains($plano, '700') => '700200',
+            default => '',
+        };
+    }
+
+    private function telefonePrincipal(OrdemServico $ordem): ?string
+    {
+        $telefones = $this->telefones($ordem);
+        $telefone = $telefones[0] ?? $ordem->cliente_telefone;
+
+        return $telefone ? preg_replace('/\D+/', '', $telefone) : null;
+    }
+
+    private function telefonesFormatados(OrdemServico $ordem): array
+    {
+        return collect($this->telefones($ordem))
+            ->map(fn ($telefone) => $this->formatarTelefone($telefone))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function telefones(OrdemServico $ordem): array
+    {
+        $dados = $ordem->sgp_dados ?? [];
+        $telefones = [
+            ...data_get($dados, 'contatos.celulares', []),
+            ...data_get($dados, 'contatos.telefones', []),
+            ...data_get($dados, 'telefones', []),
+            $ordem->cliente_telefone,
+        ];
+
+        return collect($telefones)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function formatarTelefone(string $telefone): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $telefone);
+
+        if (strlen($digits) === 11) {
+            return '(' . substr($digits, 0, 2) . ') ' . substr($digits, 2, 5) . '-' . substr($digits, 7);
+        }
+
+        if (strlen($digits) === 10) {
+            return '(' . substr($digits, 0, 2) . ') ' . substr($digits, 2, 4) . '-' . substr($digits, 6);
+        }
+
+        return $telefone ?: null;
+    }
+
+    private function valorPlano(OrdemServico $ordem): ?string
+    {
+        $dados = $ordem->sgp_dados ?? [];
+        $valor = data_get($dados, 'contratos.0.valor')
+            ?? data_get($dados, 'contratos.0.valorPlano')
+            ?? data_get($dados, 'contratos.0.plano.valor')
+            ?? data_get($dados, 'contratoValor')
+            ?? data_get($dados, 'servico_valor');
+
+        if ($valor === null || $valor === '') {
+            return null;
+        }
+
+        return is_numeric($valor) ? number_format((float) $valor, 2, ',', '') : (string) $valor;
+    }
+
+    private function enderecoSgp(OrdemServico $ordem): ?array
+    {
+        $dados = $ordem->sgp_dados ?? [];
+
+        return data_get($dados, 'contratos.0.servicos.0.endereco')
+            ?? data_get($dados, 'contratos.0.endereco')
+            ?? data_get($dados, 'endereco');
+    }
+
+    private function onuSgp(OrdemServico $ordem): ?array
+    {
+        return data_get($ordem->sgp_dados ?? [], 'contratos.0.servicos.0.onu');
     }
 }

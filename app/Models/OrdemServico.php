@@ -45,6 +45,7 @@ class OrdemServico extends Model
         'instalacao'       => 'Instalação',
         'reparo'           => 'Reparo',
         'upgrade'          => 'Upgrade',
+        'reativacao'       => 'Reativação',
         'desconectado'     => 'Desconectado',
         'troca_senha'      => 'Troca de Senha',
         'mudanca_endereco' => 'Mudança de Endereço',
@@ -52,6 +53,7 @@ class OrdemServico extends Model
     ];
 
     public const STATUS = [
+        'pendente'     => 'Pendente',
         'passada'      => 'Passada',
         'concluida'    => 'Concluída',
         'cancelada'    => 'Cancelada',

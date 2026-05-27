@@ -17,6 +17,7 @@ return new class extends Migration
                 'instalacao',
                 'reparo',
                 'upgrade',
+                'reativacao',
                 'desconectado',
                 'troca_senha',
                 'mudanca_endereco',
@@ -25,12 +26,13 @@ return new class extends Migration
             $table->enum('turno', ['manha', 'tarde']);
             $table->enum('prioridade', ['normal', 'alta', 'urgente'])->default('normal');
             $table->enum('status', [
+                'pendente',
                 'passada',
                 'concluida',
                 'cancelada',
                 'retornar',
                 'sem_contato',
-            ])->default('passada');
+            ])->default('pendente');
             $table->date('data_marcacao');
             $table->text('observacao')->nullable();
             $table->foreignId('tecnico_id')->constrained('tecnicos')->restrictOnDelete();

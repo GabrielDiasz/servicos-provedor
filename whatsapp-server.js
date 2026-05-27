@@ -7,6 +7,7 @@ const { Client, LocalAuth } = pkg;
 
 const app = express();
 const port = Number(process.env.WHATSAPP_PORT || 3000);
+const host = process.env.WHATSAPP_HOST || '127.0.0.1';
 const authToken = process.env.WHATSAPP_TOKEN || '';
 const browserPath = process.env.CHROME_PATH || [
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -140,7 +141,7 @@ app.post('/send-message', authorize, async (req, res) => {
     }
 });
 
-app.get('/groups', async (req, res) => {
+app.get('/groups', authorize, async (req, res) => {
     if (!isReady) {
         res.status(503).json({ error: 'WhatsApp ainda nao esta conectado.' });
         return;
@@ -165,6 +166,6 @@ client.initialize().catch((error) => {
     console.error('Erro ao inicializar o WhatsApp Web:', error);
 });
 
-app.listen(port, () => {
-    console.log(`Servico WhatsApp rodando em http://localhost:${port}`);
+app.listen(port, host, () => {
+    console.log(`Servico WhatsApp rodando em http://${host}:${port}`);
 });

@@ -27,9 +27,11 @@ class OrdemServicoController extends Controller
             $query->where('tipo_servico', $request->tipo_servico);
         }
 
-        if ($request->filled('data_marcacao')) {
-            $query->whereDate('data_marcacao', $request->data_marcacao);
-        }
+        $dataMarcacao = $request->filled('data_marcacao')
+            ? $request->data_marcacao
+            : now()->toDateString();
+
+        $query->whereDate('data_marcacao', $dataMarcacao);
 
         if ($request->filled('prioridade')) {
             $query->where('prioridade', $request->prioridade);
@@ -42,7 +44,7 @@ class OrdemServicoController extends Controller
 
         $tecnicos = Tecnico::where('ativo', true)->orderBy('nome')->get();
 
-        return view('ordens.index', compact('ordens', 'tecnicos'));
+        return view('ordens.index', compact('ordens', 'tecnicos', 'dataMarcacao'));
     }
 
     public function create()
@@ -67,7 +69,7 @@ class OrdemServicoController extends Controller
         ]);
 
         $validated['user_id'] = Auth::id();
-        $validated['status']  = 'passada';
+        $validated['status']  = 'pendente';
         $validated = $this->preencherDadosSgp($validated);
 
         $ordem = OrdemServico::create($validated);
@@ -98,7 +100,7 @@ class OrdemServicoController extends Controller
             'tipo_servico'     => 'required|in:' . implode(',', array_keys(OrdemServico::TIPOS)),
             'turno'            => 'required|in:manha,tarde',
             'prioridade'       => 'required|in:normal,alta,urgente',
-            'status'           => 'required|in:' . implode(',', array_keys(OrdemServico::STATUS)),
+            'status'           => 'required|in:' . implode(',', $this->statusPermitidosParaEdicao($ordem)),
             'data_marcacao'    => 'required|date',
             'tecnico_id'       => 'required|exists:tecnicos,id',
             'observacao'       => 'nullable|string|max:1000',
@@ -113,10 +115,27 @@ class OrdemServicoController extends Controller
     public function enviarWhatsApp(OrdemServico $ordem, WhatsAppService $whatsApp)
     {
         if ($whatsApp->enviarOrdemServico($ordem)) {
+            $ordem->update(['status' => 'passada']);
+
             return back()->with('success', 'Ordem de serviço enviada para o técnico pelo WhatsApp.');
         }
 
         return back()->with('error', 'Não foi possível enviar a ordem pelo WhatsApp. Confira se o serviço está conectado e se o técnico tem um grupo de envio válido.');
+    }
+
+    public function atualizarStatus(Request $request, OrdemServico $ordem)
+    {
+        if ($request->input('status') === 'passada' && $ordem->status !== 'passada') {
+            return back()->with('error', 'O status Passada só é definido após envio pelo WhatsApp.');
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:' . implode(',', $this->statusPermitidosParaEdicao($ordem)),
+        ]);
+
+        $ordem->update($validated);
+
+        return back()->with('success', 'Status da OS #' . $ordem->id . ' atualizado.');
     }
 
     public function buscarSgp(Request $request, SgpService $sgp)
@@ -151,6 +170,17 @@ class OrdemServicoController extends Controller
         return array_merge($validated, $dadosSgp, [
             'sgp_cliente_link' => $validated['sgp_cliente_link'],
         ]);
+    }
+
+    private function statusPermitidosParaEdicao(OrdemServico $ordem): array
+    {
+        $status = array_keys(OrdemServico::STATUS);
+
+        if ($ordem->status === 'passada') {
+            return $status;
+        }
+
+        return array_values(array_diff($status, ['passada']));
     }
 
     public function destroy(OrdemServico $ordem)

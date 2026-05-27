@@ -44,7 +44,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-gray-600">
-                                {{ $tecnico->ordensServico()->whereIn('status', ['passada', 'retornar', 'sem_contato'])->count() }}
+                                {{ $tecnico->ordensServico()->whereIn('status', ['pendente', 'passada', 'retornar', 'sem_contato'])->count() }}
                             </td>
                             <td class="px-4 py-3 flex gap-3 justify-end">
                                 <a href="{{ route('tecnicos.edit', $tecnico) }}"

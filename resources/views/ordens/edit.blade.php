@@ -90,6 +90,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
                         <select name="status" class="w-full border rounded-lg px-3 py-2 text-sm" required>
                             @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
+                                @continue($key === 'passada' && $ordem->status !== 'passada')
                                 <option value="{{ $key }}" {{ old('status', $ordem->status) == $key ? 'selected' : '' }}>
                                     {{ $label }}
                                 </option>

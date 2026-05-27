@@ -1,9 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-gray-800">Ordens de Serviço</h2>
+            <h2 class="text-xl font-semibold text-[#064b31]">Ordens de Serviço</h2>
             <a href="{{ route('ordens.create') }}"
-               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+               class="px-4 py-2 bg-[#ff7a00] text-white rounded-lg hover:bg-[#e96f00] text-sm font-medium shadow-sm">
                 + Nova OS
             </a>
         </div>
@@ -21,7 +21,7 @@
 
         {{-- Filtros --}}
         <form method="GET" action="{{ route('ordens.index') }}"
-              class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+              class="bg-white rounded-lg shadow-sm border border-[#d7e6d9] p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
 
             <select name="status" class="border rounded-lg px-3 py-2 text-sm">
                 <option value="">Todos os status</option>
@@ -50,25 +50,25 @@
                 @endforeach
             </select>
 
-            <input type="date" name="data_marcacao" value="{{ request('data_marcacao') }}"
+            <input type="date" name="data_marcacao" value="{{ $dataMarcacao }}"
                    class="border rounded-lg px-3 py-2 text-sm">
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-blue-600 text-white rounded-lg px-3 py-2 text-sm hover:bg-blue-700">
+                        class="flex-1 bg-[#064b31] text-white rounded-lg px-3 py-2 text-sm hover:bg-[#0c5f3a]">
                     Filtrar
                 </button>
                 <a href="{{ route('ordens.index') }}"
-                   class="flex-1 text-center bg-gray-200 text-gray-700 rounded-lg px-3 py-2 text-sm hover:bg-gray-300">
+                   class="flex-1 text-center bg-[#fff3e6] text-[#b65300] rounded-lg px-3 py-2 text-sm hover:bg-[#ffe3c2]">
                     Limpar
                 </a>
             </div>
         </form>
 
         {{-- Tabela --}}
-        <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <div class="bg-white rounded-lg shadow-sm border border-[#d7e6d9] overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#f5fbf4]">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
@@ -109,18 +109,20 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                @php
-                                    $statusCores = [
-                                        'passada'     => 'bg-blue-100 text-blue-700',
-                                        'concluida'   => 'bg-green-100 text-green-700',
-                                        'cancelada'   => 'bg-red-100 text-red-700',
-                                        'retornar'    => 'bg-yellow-100 text-yellow-700',
-                                        'sem_contato' => 'bg-gray-100 text-gray-700',
-                                    ];
-                                @endphp
-                                <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusCores[$ordem->status] }}">
-                                    {{ \App\Models\OrdemServico::STATUS[$ordem->status] }}
-                                </span>
+                                <form method="POST" action="{{ route('ordens.atualizar-status', $ordem) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <select name="status"
+                                            onchange="this.form.submit()"
+                                            class="min-w-32 rounded-full border-[#b9d9c2] bg-[#f5fbf4] px-3 py-1 text-xs font-medium text-[#064b31] focus:border-[#ff7a00] focus:ring-[#ff7a00]">
+                                        @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
+                                            @continue($key === 'passada' && $ordem->status !== 'passada')
+                                            <option value="{{ $key }}" {{ $ordem->status === $key ? 'selected' : '' }}>
+                                                {{ $label }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </form>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
@@ -137,7 +139,7 @@
                                     </form>
 
                                 <a href="{{ route('ordens.show', $ordem) }}"
-                                   class="text-blue-600 hover:underline text-xs">Ver</a>
+                                   class="text-[#0c5f3a] hover:text-[#ff7a00] hover:underline text-xs">Ver</a>
                                 </div>
                             </td>
                         </tr>
