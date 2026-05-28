@@ -23,6 +23,10 @@ class OrdemServico extends Model
         'sgp_pppoe_senha',
         'sgp_endereco',
         'sgp_dados',
+        'sgp_ocorrencia_numero',
+        'sgp_os_numero',
+        'sgp_sync_status',
+        'sgp_sync_error',
         'bairro',
         'tipo_servico',
         'turno',
@@ -53,12 +57,13 @@ class OrdemServico extends Model
     ];
 
     public const STATUS = [
-        'pendente'     => 'Pendente',
-        'passada'      => 'Passada',
-        'concluida'    => 'Concluída',
-        'cancelada'    => 'Cancelada',
-        'retornar'     => 'Retornar',
-        'sem_contato'  => 'Sem Contato',
+        'pendente'        => 'Pendente',
+        'passada'         => 'Passada',
+        'concluida'       => 'Concluída',
+        'cancelada'       => 'Cancelada',
+        'retornar'        => 'Retornar',
+        'sem_contato'     => 'Sem Contato',
+        'sem_viabilidade' => 'Sem Viabilidade',
     ];
 
     public const PRIORIDADES = [

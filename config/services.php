@@ -47,6 +47,8 @@ return [
         'url' => env('SGP_BASE_URL', 'https://gpr.sgp.net.br'),
         'app' => env('SGP_APP'),
         'token' => env('SGP_TOKEN'),
+        'web_username' => env('SGP_WEB_USERNAME'),
+        'web_password' => env('SGP_WEB_PASSWORD'),
         'timeout' => env('SGP_TIMEOUT', 15),
     ],
 

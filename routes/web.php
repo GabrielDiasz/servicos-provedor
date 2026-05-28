@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\OrdemServicoController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TecnicoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WhatsAppGrupoController;
@@ -11,15 +12,16 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return redirect()->route('ordens.index');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::post('ordens/{ordem}/enviar-whatsapp', [OrdemServicoController::class, 'enviarWhatsApp'])
         ->name('ordens.enviar-whatsapp');
 
     Route::patch('ordens/{ordem}/status', [OrdemServicoController::class, 'atualizarStatus'])
         ->name('ordens.atualizar-status');
+
+    Route::patch('ordens/{ordem}/tecnico', [OrdemServicoController::class, 'atualizarTecnico'])
+        ->name('ordens.atualizar-tecnico');
 
     Route::post('ordens/buscar-sgp', [OrdemServicoController::class, 'buscarSgp'])
         ->name('ordens.buscar-sgp');

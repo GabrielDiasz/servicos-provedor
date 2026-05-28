@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="py-6 max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="app-surface p-6">
 
             @if($errors->any())
                 <div class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg text-sm">
@@ -22,7 +22,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
                     <input type="text" name="nome" value="{{ old('nome') }}"
-                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                           class="app-field w-full"
                            required>
                 </div>
 
@@ -30,7 +30,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Telefone WhatsApp *</label>
                     <input type="text" name="telefone" value="{{ old('telefone') }}"
                            placeholder="Ex: 5573999990000"
-                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                           class="app-field w-full"
                            required>
                     <p class="text-xs text-gray-400 mt-1">Formato: código do país + DDD + número (sem espaços ou traços)</p>
                 </div>
@@ -38,7 +38,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Grupo de envio *</label>
                     <select name="whatsapp_grupo_id"
-                            class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                            class="app-select w-full"
                             required>
                         <option value="">Selecione um grupo</option>
                         @foreach($whatsappGrupos as $grupo)
@@ -52,11 +52,11 @@
 
                 <div class="flex gap-3 pt-2">
                     <button type="submit"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                            class="app-btn-primary">
                         Salvar
                     </button>
                     <a href="{{ route('tecnicos.index') }}"
-                       class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium">
+                       class="app-btn-secondary">
                         Cancelar
                     </a>
                 </div>

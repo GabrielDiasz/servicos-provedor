@@ -10,7 +10,13 @@ class TecnicoController extends Controller
 {
     public function index()
     {
-        $tecnicos = Tecnico::with('whatsappGrupo')->orderBy('nome')->paginate(20);
+        $tecnicos = Tecnico::with('whatsappGrupo')
+            ->withCount([
+                'ordensServico as ordens_abertas_count' => fn ($query) => $query->whereIn('status', ['pendente', 'passada', 'retornar', 'sem_contato']),
+            ])
+            ->orderBy('nome')
+            ->paginate(20);
+
         return view('tecnicos.index', compact('tecnicos'));
     }
 

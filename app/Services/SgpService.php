@@ -2,12 +2,158 @@
 
 namespace App\Services;
 
+use App\Models\OrdemServico;
+use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SgpService
 {
+    public function sincronizarOcorrenciaEOrdemServico(OrdemServico $ordem, ?string $usuarioResponsavel = null): array
+    {
+        if (! config('services.sgp.enabled')) {
+            return [
+                'status' => 'skipped',
+                'message' => 'Integração com o SGP desativada.',
+            ];
+        }
+
+        if (! config('services.sgp.web_username') || ! config('services.sgp.web_password')) {
+            return [
+                'status' => 'skipped',
+                'message' => 'Credenciais web do SGP não configuradas.',
+            ];
+        }
+
+        $ordem->loadMissing('tecnico');
+
+        if (! $ordem->sgp_cliente_id || ! $ordem->sgp_contrato_id) {
+            return [
+                'status' => 'skipped',
+                'message' => 'Dados do SGP insuficientes para criar ocorrência e OS.',
+            ];
+        }
+
+        $tecnicoResponsavelLabel = $this->resolverTecnicoResponsavelLabel($ordem);
+
+        if (! $tecnicoResponsavelLabel) {
+            return [
+                'status' => 'skipped',
+                'message' => 'Selecione um técnico com correspondência no SGP antes de enviar.',
+            ];
+        }
+
+        $cookieJar = new CookieJar();
+
+        try {
+            $ocorrenciaPath = "/admin/atendimento/cliente/{$ordem->sgp_cliente_id}/ocorrencia/add/";
+            $this->autenticarPortalWeb($cookieJar, $ocorrenciaPath);
+
+            $ocorrenciaHtml = $this->carregarPaginaWeb($cookieJar, $ocorrenciaPath);
+            $numeroOcorrencia = $this->extrairCampoHtml($ocorrenciaHtml, 'numero');
+
+            if (! $numeroOcorrencia) {
+                throw new \RuntimeException('Não foi possível obter o número da ocorrência no SGP.');
+            }
+
+            $usuarioSgp = $this->resolverUsuarioResponsavelSgp($ocorrenciaHtml, $usuarioResponsavel);
+            $dataAgendamento = now()->format('d/m/Y H:i:s');
+            $conteudoOcorrencia = $this->conteudoOcorrenciaSgp($ordem);
+
+            $ocorrenciaPayload = array_filter([
+                'csrfmiddlewaretoken' => $this->extrairCampoHtml($ocorrenciaHtml, 'csrfmiddlewaretoken'),
+                'dpb_token' => $this->extrairCampoHtml($ocorrenciaHtml, 'dpb_token'),
+                'numero' => $numeroOcorrencia,
+                'clientecontrato' => (string) $ordem->sgp_contrato_id,
+                'servico' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'servico', 'Internet', null),
+                'tipo' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'tipo', $this->mapaTipoOcorrencia($ordem), '18'),
+                'metodo' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'metodo', 'WhatsApp', '5'),
+                'origem' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'origem', 'WhatsApp', '5'),
+                'status' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'status', 'Aberta', '0'),
+                'usuario_responsavel' => $usuarioSgp,
+                'usuariorresponsavel' => $usuarioSgp,
+                'responsavel' => $usuarioSgp,
+                'conteudo' => $conteudoOcorrencia,
+                'observacoes' => '',
+                'data_agendamento' => $dataAgendamento,
+                'os' => 'on',
+                'protocolo_sms_2' => '',
+                'encerra_os' => 'on',
+                'gateway_sms' => '',
+                'gateway_email' => '',
+            ], static fn ($value) => $value !== null);
+
+            $ocorrenciaResponse = $this->enviarFormularioWeb($cookieJar, $ocorrenciaPath, $ocorrenciaPayload);
+
+            if ($ocorrenciaResponse->status() !== 302) {
+                throw new \RuntimeException('O SGP nÃ£o redirecionou apÃ³s criar a ocorrÃªncia.');
+            }
+
+            $osPath = $this->normalizarCaminhoSgp($ocorrenciaResponse->header('Location') ?: '');
+            $ocorrenciaId = $this->extrairIdDoCaminhoSgp($osPath);
+
+            if (! $ocorrenciaId) {
+                throw new \RuntimeException('Não foi possível identificar o ID da ocorrência criada no SGP.');
+            }
+
+            $osHtml = $this->carregarPaginaWeb($cookieJar, $osPath);
+            $tecnicoResponsavel = $this->resolverTecnicoResponsavelSgp($ordem, $osHtml);
+
+            if (! $tecnicoResponsavel) {
+                throw new \RuntimeException('Não foi possível mapear o técnico responsável no SGP.');
+            }
+            $osPayload = array_filter([
+                'csrfmiddlewaretoken' => $this->extrairCampoHtml($osHtml, 'csrfmiddlewaretoken'),
+                'dpb_token' => $this->extrairCampoHtml($osHtml, 'dpb_token'),
+                'tipoos' => $this->resolverOpcaoPorTexto($osHtml, 'tipoos', 'Externa', '1'),
+                'motivoos' => $this->resolverMotivoOs($ordem, $osHtml),
+                'prioridade' => $this->resolverPrioridadeOs($ordem, $osHtml),
+                'data_agendamento' => $dataAgendamento,
+                'data_previsao_finalizacao' => '',
+                'setor' => '',
+                'responsavel' => $tecnicoResponsavel,
+                'tecnico_responsavel' => $tecnicoResponsavel,
+                'conteudo' => $conteudoOcorrencia,
+                'servicoprestado' => '',
+                'anotacao' => '',
+                'anotacao_publica' => '',
+                'veiculo' => '',
+                'veiculo_km' => '',
+                'sistema_sync' => '',
+                'gateway_sms' => '',
+                'encerra_ocorrencia' => 'on',
+            ], static fn ($value) => $value !== null);
+
+            $osResponse = $this->enviarFormularioWeb($cookieJar, $osPath, $osPayload);
+
+            if ($osResponse->status() !== 302) {
+                throw new \RuntimeException('O SGP não redirecionou após criar a ordem de serviço.');
+            }
+
+            $finalPath = $this->normalizarCaminhoSgp($osResponse->header('Location') ?: "/admin/atendimento/ocorrencia/{$ocorrenciaId}/edit/#os");
+            $finalHtml = $this->carregarPaginaWeb($cookieJar, $finalPath);
+            $osNumero = $this->extrairNumeroOs($finalHtml);
+
+            return [
+                'status' => 'synced',
+                'message' => 'Ocorrência e OS criadas no SGP com sucesso.',
+                'ocorrencia_numero' => $numeroOcorrencia,
+                'os_numero' => $osNumero,
+            ];
+        } catch (\Throwable $exception) {
+            Log::warning('Falha ao sincronizar ocorrência/OS no SGP.', [
+                'ordem_id' => $ordem->id,
+                'erro' => $exception->getMessage(),
+            ]);
+
+            return [
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ];
+        }
+    }
+
     public function consultarClientePorLink(?string $link): ?array
     {
         $clienteId = $this->extrairClienteIdDoLink($link);
@@ -187,10 +333,301 @@ class SgpService
 
         $extras = trim(implode(', ', array_filter([
             isset($endereco['complemento']) && $endereco['complemento'] !== '' ? 'Complemento: ' . $endereco['complemento'] : null,
-            isset($endereco['pontoreferencia']) && $endereco['pontoreferencia'] !== '' ? 'Referência: ' . $endereco['pontoreferencia'] : null,
-            isset($endereco['ponto_referencia']) && $endereco['ponto_referencia'] !== '' ? 'Referência: ' . $endereco['ponto_referencia'] : null,
+            isset($endereco['pontoreferencia']) && $endereco['pontoreferencia'] !== '' ? 'ReferÃªncia: ' . $endereco['pontoreferencia'] : null,
+            isset($endereco['ponto_referencia']) && $endereco['ponto_referencia'] !== '' ? 'ReferÃªncia: ' . $endereco['ponto_referencia'] : null,
         ])));
 
         return trim(implode(', ', array_filter([$logradouro, $extras]))) ?: null;
+    }
+
+    private function autenticarPortalWeb(CookieJar $cookies, string $nextPath): void
+    {
+        $baseUrl = rtrim(config('services.sgp.url'), '/');
+        $loginUrl = $baseUrl . '/accounts/login/?next=' . $nextPath;
+
+        $loginPage = Http::timeout(config('services.sgp.timeout', 15))
+            ->withOptions(['cookies' => $cookies])
+            ->get($loginUrl);
+
+        if ($loginPage->failed()) {
+            throw new \RuntimeException('NÃ£o foi possÃ­vel abrir a tela de login do SGP.');
+        }
+
+        $csrf = $this->extrairCampoHtml($loginPage->body(), 'csrfmiddlewaretoken');
+
+        if (! $csrf) {
+            throw new \RuntimeException('CSRF do login do SGP nÃ£o encontrado.');
+        }
+
+        $response = Http::timeout(config('services.sgp.timeout', 15))
+            ->withOptions([
+                'cookies' => $cookies,
+                'allow_redirects' => false,
+            ])
+            ->withHeaders([
+                'Origin' => $baseUrl,
+                'Referer' => $loginUrl,
+            ])
+            ->asForm()
+            ->post($loginUrl, [
+                'csrfmiddlewaretoken' => $csrf,
+                'username' => config('services.sgp.web_username'),
+                'password' => config('services.sgp.web_password'),
+                'next' => $nextPath,
+            ]);
+
+        if (! in_array($response->status(), [200, 302], true)) {
+            throw new \RuntimeException('Falha ao autenticar no SGP.');
+        }
+    }
+
+    private function carregarPaginaWeb(CookieJar $cookies, string $path): string
+    {
+        $response = Http::timeout(config('services.sgp.timeout', 15))
+            ->withOptions(['cookies' => $cookies])
+            ->get($this->montarUrlSgp($path));
+
+        if ($response->failed()) {
+            throw new \RuntimeException('Falha ao carregar pÃ¡gina do SGP: ' . $path);
+        }
+
+        return $response->body();
+    }
+
+    private function enviarFormularioWeb(CookieJar $cookies, string $path, array $payload)
+    {
+        $url = $this->montarUrlSgp($path);
+
+        return Http::timeout(config('services.sgp.timeout', 15))
+            ->withOptions([
+                'cookies' => $cookies,
+                'allow_redirects' => false,
+            ])
+            ->withHeaders([
+                'Origin' => rtrim(config('services.sgp.url'), '/'),
+                'Referer' => $url,
+            ])
+            ->asForm()
+            ->post($url, $payload);
+    }
+
+    private function montarUrlSgp(string $path): string
+    {
+        return rtrim(config('services.sgp.url'), '/') . '/' . ltrim($path, '/');
+    }
+
+    private function normalizarCaminhoSgp(string $path): string
+    {
+        $path = trim($path);
+
+        if ($path === '') {
+            return $path;
+        }
+
+        return parse_url($path, PHP_URL_PATH) ?: $path;
+    }
+
+    private function extrairIdDoCaminhoSgp(string $path): ?string
+    {
+        if (preg_match('~^/admin/atendimento/ocorrencia/(\d+)/os/add/?$~', $path, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('~^/admin/atendimento/ocorrencia/(\d+)/edit/~', $path, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    private function extrairCampoHtml(string $html, string $name): ?string
+    {
+        $dom = new \DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+        $xpath = new \DOMXPath($dom);
+
+        foreach ([
+            "//input[@name='{$name}']",
+            "//textarea[@name='{$name}']",
+            "//select[@name='{$name}']",
+        ] as $query) {
+            $nodes = $xpath->query($query);
+
+            if ($nodes && $nodes->length > 0) {
+                $node = $nodes->item(0);
+
+                if ($node->nodeName === 'textarea') {
+                    return trim($node->textContent) ?: null;
+                }
+
+                if ($node->nodeName === 'select') {
+                    foreach ($node->childNodes as $option) {
+                        if ($option->nodeName === 'option' && $option->hasAttribute('selected')) {
+                            $value = trim($option->getAttribute('value'));
+                            return $value !== '' ? $value : null;
+                        }
+                    }
+
+                    return null;
+                }
+
+                $value = trim($node->getAttribute('value'));
+                return $value !== '' ? $value : null;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolverOpcaoPorTexto(string $html, string $name, string $texto, ?string $fallback = null): ?string
+    {
+        $dom = new \DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+        $xpath = new \DOMXPath($dom);
+        $nodes = $xpath->query("//select[@name='{$name}']/option");
+
+        if (! $nodes) {
+            return $fallback;
+        }
+
+        $procurado = $this->normalizarBusca($texto);
+
+        foreach ($nodes as $option) {
+            $label = $this->normalizarBusca(trim($option->textContent));
+
+            if ($label !== '' && (str_contains($label, $procurado) || $label === $procurado)) {
+                $value = trim($option->getAttribute('value'));
+                return $value !== '' ? $value : $fallback;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function normalizarBusca(string $texto): string
+    {
+        $normalizado = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        $normalizado = mb_strtoupper(trim($normalizado ?: $texto));
+
+        return preg_replace('/[^A-Z0-9]+/', '', $normalizado) ?: '';
+    }
+
+    private function mapaTipoOcorrencia(OrdemServico $ordem): string
+    {
+        return match ($ordem->tipo_servico) {
+            'instalacao' => 'INSTALACAO',
+            'reativacao' => 'REATIVACAO',
+            'upgrade' => 'UPGRADE',
+            'mudanca_endereco' => 'MUDANCA DE ENDERECO',
+            'cancelamento' => 'CANCELAMENTO',
+            'troca_senha' => 'REPARO - TROCA DE SENHA',
+            'desconectado' => 'REPARO - DESCONECTADO',
+            default => 'REPARO - OSCILACAO',
+        };
+    }
+
+    private function resolverMotivoOs(OrdemServico $ordem, string $html): string
+    {
+        $texto = match ($ordem->tipo_servico) {
+            'instalacao', 'reativacao' => 'instalacao de kit',
+            'mudanca_endereco' => 'mudanca endereco',
+            'upgrade' => 'upgrade',
+            default => 'corretiva',
+        };
+
+        return $this->resolverOpcaoPorTexto($html, 'motivoos', $texto, '9') ?? '9';
+    }
+
+    private function resolverPrioridadeOs(OrdemServico $ordem, string $html): string
+    {
+        $texto = match ($ordem->prioridade) {
+            'urgente' => 'Alta',
+            'alta' => 'Alta',
+            default => 'Normal',
+        };
+
+        return $this->resolverOpcaoPorTexto($html, 'prioridade', $texto, '2') ?? '2';
+    }
+
+    private function resolverUsuarioResponsavelSgp(string $html, ?string $usuarioResponsavel = null): ?string
+    {
+        $candidatos = array_values(array_filter(array_unique([
+            $usuarioResponsavel,
+            config('services.sgp.web_username'),
+            'gabrieldias',
+        ])));
+
+        foreach ($candidatos as $texto) {
+            $resolvido = $this->resolverOpcaoPorTexto($html, 'usuario_responsavel', $texto)
+                ?? $this->resolverOpcaoPorTexto($html, 'responsavel', $texto)
+                ?? $this->resolverOpcaoPorTexto($html, 'usuariorresponsavel', $texto);
+
+            if ($resolvido) {
+                return $resolvido;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolverTecnicoResponsavelLabel(OrdemServico $ordem): ?string
+    {
+        $nomeTecnico = mb_strtolower(trim((string) data_get($ordem, 'tecnico.nome')));
+
+        if ($nomeTecnico === '') {
+            return null;
+        }
+
+        return match (true) {
+            str_contains($nomeTecnico, 'jhon') => 'Jonh cleiton soares cavalcante',
+            str_contains($nomeTecnico, 'vanderley') => 'Vanderley',
+            str_contains($nomeTecnico, 'teste') => 'Pablo Oliveira Bomfim',
+            default => null,
+        };
+    }
+
+    private function resolverTecnicoResponsavelSgp(OrdemServico $ordem, string $html): ?string
+    {
+        $label = $this->resolverTecnicoResponsavelLabel($ordem);
+
+        if (! $label) {
+            return null;
+        }
+
+        return $this->resolverOpcaoPorTexto($html, 'responsavel', $label)
+            ?? $this->resolverOpcaoPorTexto($html, 'tecnicos', $label);
+    }
+
+    private function conteudoOcorrenciaSgp(OrdemServico $ordem): string
+    {
+        $observacao = trim((string) $ordem->observacao);
+
+        if ($observacao !== '') {
+            return $observacao;
+        }
+
+        return match ($ordem->tipo_servico) {
+            'instalacao' => 'INSTALAÇÃO',
+            'reativacao' => 'REATIVAÇÃO',
+            'mudanca_endereco' => 'MUDANÇA DE ENDEREÇO',
+            'desconectado' => 'DESCONECTADO',
+            'reparo' => 'OSCILAÇÃO',
+            default => 'SEM OBSERVAÇÃO',
+        };
+    }
+
+    private function extrairNumeroOs(string $html): ?string
+    {
+        $texto = preg_replace('/\s+/u', ' ', strip_tags($html));
+
+        if (preg_match('/\bOS:\s*(\d+)\s*-/u', $texto, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('/\bN\. OS:\s*(\d+)/u', $texto, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }

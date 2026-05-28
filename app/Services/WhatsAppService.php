@@ -61,7 +61,7 @@ class WhatsAppService
     private function mensagensOrdemServico(OrdemServico $ordem): array
     {
         $tipo = OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico;
-        $observacao = trim((string) $ordem->observacao);
+        $observacao = $this->observacaoMensagem($ordem, $tipo);
         $servicosCompletos = ['instalacao', 'reativacao', 'mudanca_endereco', 'upgrade'];
         $login = $this->loginPppoe($ordem);
 
@@ -121,11 +121,53 @@ class WhatsAppService
 
     private function mensagemServicoEndereco(OrdemServico $ordem, string $tipo, string $observacao = ''): ?string
     {
+        $linhaInicial = $this->linhaInicialServico($ordem, $tipo, $observacao);
+
         return collect([
-            trim(mb_strtoupper($tipo) . ($observacao !== '' ? " - {$observacao}" : '')),
+            $linhaInicial,
             '',
             $this->mensagemEndereco($ordem),
         ])->filter(fn ($linha) => $linha !== null)->implode("\n");
+    }
+
+    private function observacaoMensagem(OrdemServico $ordem, string $tipo): string
+    {
+        $observacao = trim((string) $ordem->observacao);
+
+        if ($observacao === '') {
+            return '';
+        }
+
+        return $this->normalizarTextoComparacao($observacao) === $this->normalizarTextoComparacao($tipo)
+            ? ''
+            : $observacao;
+    }
+
+    private function linhaInicialServico(OrdemServico $ordem, string $tipo, string $observacao = ''): string
+    {
+        $observacaoNormalizada = trim($observacao);
+
+        if ($ordem->tipo_servico === 'upgrade') {
+            return mb_strtoupper($tipo) . ' - ' . $observacaoNormalizada;
+        }
+
+        if ($observacaoNormalizada !== '') {
+            return mb_strtoupper($tipo) . ' - ' . $observacaoNormalizada;
+        }
+
+        return match ($ordem->tipo_servico) {
+            'reparo' => 'REPARO - OSCILAÇÃO',
+            'troca_senha' => mb_strtoupper($tipo),
+            default => mb_strtoupper($tipo),
+        };
+    }
+
+    private function normalizarTextoComparacao(string $texto): string
+    {
+        $normalizado = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        $normalizado = mb_strtoupper(trim($normalizado ?: $texto));
+
+        return preg_replace('/[^A-Z0-9]+/', '', $normalizado) ?: '';
     }
 
     private function mensagemCtoPorta(OrdemServico $ordem): ?string
@@ -139,11 +181,6 @@ class WhatsAppService
         }
 
         return 'CTO: ' . $cto . ' Porta: ' . ($porta ?: 'sem porta');
-    }
-
-    private function nomeMensagem(OrdemServico $ordem): string
-    {
-        return str_replace(' ', '_', mb_strtoupper($ordem->cliente_nome));
     }
 
     private function loginPppoe(OrdemServico $ordem): ?string
@@ -161,6 +198,7 @@ class WhatsAppService
         $plano = mb_strtoupper((string) $plano);
 
         return match (true) {
+            str_contains($plano, '50') => '52200',
             str_contains($plano, '300') => '310200',
             str_contains($plano, '500') => '500200',
             str_contains($plano, '700') => '700200',
@@ -170,8 +208,7 @@ class WhatsAppService
 
     private function telefonePrincipal(OrdemServico $ordem): ?string
     {
-        $telefones = $this->telefones($ordem);
-        $telefone = $telefones[0] ?? $ordem->cliente_telefone;
+        $telefone = $ordem->cliente_telefone ?: ($this->telefones($ordem)[0] ?? null);
 
         return $telefone ? preg_replace('/\D+/', '', $telefone) : null;
     }
@@ -189,10 +226,10 @@ class WhatsAppService
     {
         $dados = $ordem->sgp_dados ?? [];
         $telefones = [
+            $ordem->cliente_telefone,
             ...data_get($dados, 'contatos.celulares', []),
             ...data_get($dados, 'contatos.telefones', []),
             ...data_get($dados, 'telefones', []),
-            $ordem->cliente_telefone,
         ];
 
         return collect($telefones)
@@ -247,3 +284,4 @@ class WhatsAppService
         return data_get($ordem->sgp_dados ?? [], 'contratos.0.servicos.0.onu');
     }
 }
+

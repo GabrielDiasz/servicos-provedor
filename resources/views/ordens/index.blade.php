@@ -1,9 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-[#064b31]">Ordens de Serviço</h2>
+            <h2 class="text-xl font-semibold text-[#064b31] dark:text-slate-100">Ordens de Serviço</h2>
             <a href="{{ route('ordens.create') }}"
-               class="px-4 py-2 bg-[#ff7a00] text-white rounded-lg hover:bg-[#e96f00] text-sm font-medium shadow-sm">
+               class="px-4 py-2 bg-[#ff7a00] text-white rounded-lg hover:bg-[#e96f00] text-sm font-medium shadow-sm dark:shadow-none">
                 + Nova OS
             </a>
         </div>
@@ -14,17 +14,9 @@
         class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
     >
 
-        {{-- Alertas --}}
-        @if(session('success'))
-            <div class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">{{ session('success') }}</div>
-        @endif
-        @if(session('error'))
-            <div class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">{{ session('error') }}</div>
-        @endif
-
         {{-- Filtros --}}
         <form method="GET" action="{{ route('ordens.index') }}"
-              class="bg-white rounded-lg shadow-sm border border-[#d7e6d9] p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+              class="bg-white rounded-xl shadow-sm border border-[#d7e6d9] p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
 
             <select name="status" class="border rounded-lg px-3 py-2 text-sm">
                 <option value="">Todos os status</option>
@@ -69,7 +61,7 @@
         </form>
 
         {{-- Tabela --}}
-        <div class="bg-white rounded-lg shadow-sm border border-[#d7e6d9] overflow-x-auto">
+        <div class="bg-white rounded-xl shadow-sm border border-[#d7e6d9] overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-[#f5fbf4]">
                     <tr>
@@ -85,9 +77,55 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
+                    @php
+                        $rowStyles = [
+                            'passada' => [
+                                'class' => 'bg-yellow-50/80 dark:bg-yellow-900/10',
+                                'accent' => 'box-shadow: inset 8px 0 0 #facc15;',
+                                'id' => 'text-yellow-700 dark:text-yellow-300 font-semibold',
+                            ],
+                            'concluida' => [
+                                'class' => 'bg-emerald-50/80 dark:bg-emerald-900/10',
+                                'accent' => 'box-shadow: inset 8px 0 0 #34d399;',
+                                'id' => 'text-emerald-700 dark:text-emerald-300 font-semibold',
+                            ],
+                            'pendente' => [
+                                'class' => 'bg-white dark:bg-slate-900',
+                                'accent' => 'box-shadow: inset 8px 0 0 #cbd5e1;',
+                                'id' => 'text-slate-500 dark:text-slate-400',
+                            ],
+                            'retornar' => [
+                                'class' => 'bg-orange-50/80 dark:bg-orange-900/10',
+                                'accent' => 'box-shadow: inset 8px 0 0 #fb923c;',
+                                'id' => 'text-orange-700 dark:text-orange-300 font-semibold',
+                            ],
+                            'sem_contato' => [
+                                'class' => 'bg-rose-50/80 dark:bg-rose-900/10',
+                                'accent' => 'box-shadow: inset 8px 0 0 #fb7185;',
+                                'id' => 'text-rose-700 dark:text-rose-300 font-semibold',
+                            ],
+                            'sem_viabilidade' => [
+                                'class' => 'bg-red-50/80 dark:bg-red-900/10',
+                                'accent' => 'box-shadow: inset 8px 0 0 #f87171;',
+                                'id' => 'text-red-700 dark:text-red-300 font-semibold',
+                            ],
+                            'cancelada' => [
+                                'class' => 'bg-slate-50/80 dark:bg-slate-800/80',
+                                'accent' => 'box-shadow: inset 8px 0 0 #94a3b8;',
+                                'id' => 'text-slate-500 dark:text-slate-400',
+                            ],
+                        ];
+                    @endphp
                     @forelse($ordens as $ordem)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-gray-500">{{ $ordem->id }}</td>
+                        @php
+                            $rowStyle = $rowStyles[$ordem->status] ?? [
+                                'class' => 'bg-white dark:bg-slate-900',
+                                'accent' => 'box-shadow: inset 8px 0 0 transparent;',
+                                'id' => 'text-gray-500',
+                            ];
+                        @endphp
+                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors {{ $rowStyle['class'] }}" style="{{ $rowStyle['accent'] }}">
+                            <td class="px-4 py-4 align-top {{ $rowStyle['id'] }}">{{ $ordem->id }}</td>
                             <td class="px-4 py-3 font-medium text-gray-900">
                                 {{ $ordem->cliente_nome }}<br>
                                 <span class="text-xs text-gray-500">{{ $ordem->cliente_telefone }}</span>
@@ -95,15 +133,39 @@
                             <td class="px-4 py-3">
                                 {{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico }}
                             </td>
-                            <td class="px-4 py-3 text-gray-600">{{ $ordem->bairro }}</td>
-                            <td class="px-4 py-3 text-gray-600">{{ $ordem->tecnico->nome ?? '-' }}</td>
-                            <td class="px-4 py-3 text-gray-600">
+                            <td class="px-4 py-4 text-gray-600 align-top">{{ $ordem->bairro }}</td>
+                            <td class="px-4 py-3">
+                                <form method="POST" action="{{ route('ordens.atualizar-tecnico', $ordem) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <select name="tecnico_id"
+                                            x-on:change="
+                                                window.dispatchEvent(new CustomEvent('busy-start', { detail: { label: 'Atualizando técnico...' } }));
+                                                setTimeout(() => $el.form.submit(), 60)
+                                            "
+                                            class="min-w-40 rounded-full border-[#b9d9c2] bg-[#f5fbf4] px-3 py-1 text-xs font-medium text-[#064b31] focus:border-[#ff7a00] focus:ring-[#ff7a00]">
+                                        <option value="">Sem técnico</option>
+                                        @foreach($tecnicosDisponiveis as $tecnico)
+                                            <option value="{{ $tecnico->id }}" {{ (string) $ordem->tecnico_id === (string) $tecnico->id ? 'selected' : '' }}>
+                                                {{ $tecnico->nome }}{{ $tecnico->ativo ? '' : ' (Inativo)' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            </td>
+                            <td class="px-4 py-4 text-gray-600 align-top">
                                 {{ $ordem->data_marcacao->format('d/m/Y') }}<br>
-                                <span class="text-xs text-gray-500">
+                                @php
+                                    $turnoCores = [
+                                        'manha' => 'bg-sky-100 text-sky-800 border-sky-200',
+                                        'tarde' => 'bg-amber-100 text-amber-800 border-amber-200',
+                                    ];
+                                @endphp
+                                <span class="mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold tracking-wide {{ $turnoCores[$ordem->turno] ?? 'bg-gray-100 text-gray-700 border-gray-200' }}">
                                     {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-4 align-top">
                                 @php
                                     $cores = ['normal' => 'bg-gray-100 text-gray-700', 'alta' => 'bg-yellow-100 text-yellow-700', 'urgente' => 'bg-red-100 text-red-700'];
                                 @endphp
@@ -111,12 +173,15 @@
                                     {{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-4 align-top">
                                 <form method="POST" action="{{ route('ordens.atualizar-status', $ordem) }}">
                                     @csrf
                                     @method('PATCH')
                                     <select name="status"
-                                            onchange="this.form.submit()"
+                                            x-on:change="
+                                                window.dispatchEvent(new CustomEvent('busy-start', { detail: { label: 'Atualizando status...' } }));
+                                                setTimeout(() => $el.form.submit(), 60)
+                                            "
                                             class="min-w-32 rounded-full border-[#b9d9c2] bg-[#f5fbf4] px-3 py-1 text-xs font-medium text-[#064b31] focus:border-[#ff7a00] focus:ring-[#ff7a00]">
                                         @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
                                             @continue($key === 'passada' && $ordem->status !== 'passada')
@@ -127,9 +192,10 @@
                                     </select>
                                 </form>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-4 align-top">
                                 <div class="flex items-center gap-3">
-                                    <form method="POST" action="{{ route('ordens.enviar-whatsapp', $ordem) }}">
+                                    @if($ordem->tecnico_id)
+                                    <form method="POST" action="{{ route('ordens.enviar-whatsapp', $ordem) }}" x-on:submit="$dispatch('busy-start', { label: 'Enviando WhatsApp...' })">
                                         @csrf
                                         <button type="submit"
                                                 title="Enviar serviço para o técnico pelo WhatsApp"
@@ -140,14 +206,17 @@
                                             <span class="sr-only">Enviar pelo WhatsApp</span>
                                         </button>
                                     </form>
+                                    @endif
 
                                     <a href="{{ route('ordens.show', $ordem) }}"
-                                       class="text-[#0c5f3a] hover:text-[#ff7a00] hover:underline text-xs">Ver</a>
+                                       class="inline-flex h-8 items-center rounded-full border border-[#b9d9c2] bg-white px-3 text-xs font-medium text-[#064b31] hover:border-[#ff7a00] hover:text-[#ff7a00] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-[#ff7a00] dark:hover:text-[#ffb366]">
+                                        Ver
+                                    </a>
 
                                     <button type="button"
                                             title="Excluir ordem de serviÃ§o"
                                             x-on:click="deleteModalOpen = true; deleteAction = @js(route('ordens.destroy', $ordem)); deleteLabel = @js('OS #' . $ordem->id . ' - ' . $ordem->cliente_nome)"
-                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-900/60 dark:bg-slate-900 dark:hover:bg-red-950/30">
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M8 6V4h8v2"/>
@@ -182,19 +251,19 @@
                 x-show="deleteModalOpen"
                 x-transition
                 x-on:click.outside="deleteModalOpen = false"
-                class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+                class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:border dark:border-slate-700 dark:bg-slate-900 dark:shadow-2xl"
             >
-                <h3 class="text-lg font-semibold text-gray-900">Excluir ordem de serviço?</h3>
-                <p class="mt-2 text-sm text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Excluir ordem de serviço?</h3>
+                <p class="mt-2 text-sm text-gray-600 dark:text-slate-300">
                     Esta ação vai remover definitivamente <span class="font-semibold" x-text="deleteLabel"></span>.
                 </p>
 
-                <form method="POST" x-bind:action="deleteAction" class="mt-6 flex justify-end gap-3">
+                <form method="POST" x-bind:action="deleteAction" class="mt-6 flex justify-end gap-3" x-on:submit="$dispatch('busy-start', { label: 'Excluindo OS...' })">
                     @csrf
                     @method('DELETE')
                     <button type="button"
                             x-on:click="deleteModalOpen = false"
-                            class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                            class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
                         Cancelar
                     </button>
                     <button type="submit"

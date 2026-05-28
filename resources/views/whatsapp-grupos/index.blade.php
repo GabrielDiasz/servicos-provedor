@@ -10,13 +10,6 @@
     </x-slot>
 
     <div class="py-6 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        @if(session('success'))
-            <div class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">{{ session('success') }}</div>
-        @endif
-        @if(session('error'))
-            <div class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">{{ session('error') }}</div>
-        @endif
-
         <div class="bg-white rounded-lg shadow overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50">

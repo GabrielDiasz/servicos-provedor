@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Editar OS #{{ $ordem->id }}</h2>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-slate-100">Editar OS #{{ $ordem->id }}</h2>
     </x-slot>
 
     <div class="py-6 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="app-surface p-6">
 
             @if($errors->any())
-                <div class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg text-sm">
+                <div class="mb-4 rounded-lg border border-red-200 bg-red-100 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200">
                     <ul class="list-disc list-inside space-y-1">
                         @foreach($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -16,46 +16,46 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('ordens.update', $ordem) }}" class="space-y-5">
+            <form method="POST" action="{{ route('ordens.update', $ordem) }}" class="space-y-5" x-on:submit="$dispatch('busy-start', { label: 'Atualizando OS...' })">
                 @csrf
                 @method('PUT')
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Link do cliente no SGP</label>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Link do cliente no SGP</label>
                     <div class="flex gap-2">
                         <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link', $ordem->sgp_cliente_link) }}"
                                placeholder="https://gpr.sgp.net.br/admin/cliente/3176/edit/"
-                               class="flex-1 border rounded-lg px-3 py-2 text-sm">
+                               class="app-field flex-1">
                         <button type="button" id="buscar-sgp"
-                                class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">
+                                class="app-btn-secondary px-4 py-2.5">
                             Buscar
                         </button>
                     </div>
-                    <p id="sgp-feedback" class="text-xs text-gray-400 mt-1">Cole o link do cliente no SGP para preencher os dados principais.</p>
+                    <p id="sgp-feedback" class="mt-1 text-xs text-gray-400 dark:text-slate-400">Cole o link do cliente no SGP para preencher os dados principais.</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Cliente *</label>
                         <input type="text" name="cliente_nome" id="cliente_nome" value="{{ old('cliente_nome', $ordem->cliente_nome) }}"
-                               class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                               class="app-field w-full" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Telefone *</label>
                         <input type="text" name="cliente_telefone" id="cliente_telefone" value="{{ old('cliente_telefone', $ordem->cliente_telefone) }}"
-                               class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                               class="app-field w-full" required>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Bairro *</label>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Bairro *</label>
                         <input type="text" name="bairro" id="bairro" value="{{ old('bairro', $ordem->bairro) }}"
-                               class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                               class="app-field w-full" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Serviço *</label>
-                        <select name="tipo_servico" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Tipo de Serviço *</label>
+                        <select name="tipo_servico" class="app-select w-full" required>
                             @foreach(\App\Models\OrdemServico::TIPOS as $key => $label)
                                 <option value="{{ $key }}" {{ old('tipo_servico', $ordem->tipo_servico) == $key ? 'selected' : '' }}>
                                     {{ $label }}
@@ -67,8 +67,8 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Turno *</label>
-                        <select name="turno" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Turno *</label>
+                        <select name="turno" class="app-select w-full" required>
                             @foreach(\App\Models\OrdemServico::TURNOS as $key => $label)
                                 <option value="{{ $key }}" {{ old('turno', $ordem->turno) == $key ? 'selected' : '' }}>
                                     {{ $label }}
@@ -77,8 +77,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade *</label>
-                        <select name="prioridade" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Prioridade *</label>
+                        <select name="prioridade" class="app-select w-full" required>
                             @foreach(\App\Models\OrdemServico::PRIORIDADES as $key => $label)
                                 <option value="{{ $key }}" {{ old('prioridade', $ordem->prioridade) == $key ? 'selected' : '' }}>
                                     {{ $label }}
@@ -87,8 +87,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                        <select name="status" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Status *</label>
+                        <select name="status" class="app-select w-full" required>
                             @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
                                 @continue($key === 'passada' && $ordem->status !== 'passada')
                                 <option value="{{ $key }}" {{ old('status', $ordem->status) == $key ? 'selected' : '' }}>
@@ -98,16 +98,17 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Data *</label>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data *</label>
                         <input type="date" name="data_marcacao"
                                value="{{ old('data_marcacao', $ordem->data_marcacao->format('Y-m-d')) }}"
-                               class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                               class="app-field w-full" required>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Técnico *</label>
-                    <select name="tecnico_id" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
+                    <select name="tecnico_id" class="app-select w-full">
+                        <option value="">Sem técnico</option>
                         @foreach($tecnicos as $tecnico)
                             <option value="{{ $tecnico->id }}" {{ old('tecnico_id', $ordem->tecnico_id) == $tecnico->id ? 'selected' : '' }}>
                                 {{ $tecnico->nome }}
@@ -117,18 +118,19 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Observação</label>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Observação</label>
                     <textarea name="observacao" rows="3"
-                              class="w-full border rounded-lg px-3 py-2 text-sm">{{ old('observacao', $ordem->observacao) }}</textarea>
+                              class="app-field w-full">{{ old('observacao', $ordem->observacao) }}</textarea>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-slate-400">Obrigatória para Upgrade.</p>
                 </div>
 
                 <div class="flex gap-3 pt-2">
                     <button type="submit"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                            class="app-btn-primary">
                         Atualizar OS
                     </button>
                     <a href="{{ route('ordens.show', $ordem) }}"
-                       class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium">
+                       class="app-btn-secondary">
                         Cancelar
                     </a>
                 </div>

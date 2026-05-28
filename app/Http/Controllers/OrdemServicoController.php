@@ -8,6 +8,7 @@ use App\Services\SgpService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
 
 class OrdemServicoController extends Controller
 {
@@ -39,17 +40,20 @@ class OrdemServicoController extends Controller
 
         $ordens = $query->orderByRaw("FIELD(prioridade, 'urgente', 'alta', 'normal')")
             ->orderBy('data_marcacao', 'asc')
+            ->orderByRaw("FIELD(turno, 'manha', 'tarde')")
+            ->orderBy('id', 'desc')
             ->paginate(20)
             ->withQueryString();
 
-        $tecnicos = Tecnico::where('ativo', true)->orderBy('nome')->get();
+        $tecnicos = $this->tecnicosAtivosOrdenados();
+        $tecnicosDisponiveis = $this->tecnicosDisponiveisOrdenados();
 
-        return view('ordens.index', compact('ordens', 'tecnicos', 'dataMarcacao'));
+        return view('ordens.index', compact('ordens', 'tecnicos', 'tecnicosDisponiveis', 'dataMarcacao'));
     }
 
     public function create()
     {
-        $tecnicos = Tecnico::where('ativo', true)->orderBy('nome')->get();
+        $tecnicos = $this->tecnicosAtivosOrdenados();
         return view('ordens.create', compact('tecnicos'));
     }
 
@@ -64,29 +68,33 @@ class OrdemServicoController extends Controller
             'turno'            => 'required|in:manha,tarde',
             'prioridade'       => 'required|in:normal,alta,urgente',
             'data_marcacao'    => 'required|date',
-            'tecnico_id'       => 'required|exists:tecnicos,id',
-            'observacao'       => 'nullable|string|max:1000',
+            'tecnico_id'       => 'nullable|exists:tecnicos,id',
+            'observacao'       => 'required_if:tipo_servico,upgrade|nullable|string|max:1000',
+        ], [
+            'observacao.required_if' => 'A observação é obrigatória para o serviço Upgrade.',
         ]);
 
         $validated['user_id'] = Auth::id();
-        $validated['status']  = 'pendente';
+        $validated['status'] = 'pendente';
         $validated = $this->preencherDadosSgp($validated);
 
-        $ordem = OrdemServico::create($validated);
+        OrdemServico::create($validated);
 
         return redirect()->route('ordens.index')
-            ->with('success', 'Ordem de serviço criada com sucesso!');
+            ->with('success', 'Ordem de serviço criada com sucesso.');
     }
 
     public function show(OrdemServico $ordem)
     {
         $ordem->load(['tecnico', 'atendente']);
-        return view('ordens.show', compact('ordem'));
+        $ctoInfo = $this->ctoInfo($ordem);
+
+        return view('ordens.show', compact('ordem', 'ctoInfo'));
     }
 
     public function edit(OrdemServico $ordem)
     {
-        $tecnicos = Tecnico::where('ativo', true)->orderBy('nome')->get();
+        $tecnicos = $this->tecnicosAtivosOrdenados();
         return view('ordens.edit', compact('ordem', 'tecnicos'));
     }
 
@@ -102,18 +110,26 @@ class OrdemServicoController extends Controller
             'prioridade'       => 'required|in:normal,alta,urgente',
             'status'           => 'required|in:' . implode(',', $this->statusPermitidosParaEdicao($ordem)),
             'data_marcacao'    => 'required|date',
-            'tecnico_id'       => 'required|exists:tecnicos,id',
-            'observacao'       => 'nullable|string|max:1000',
+            'tecnico_id'       => 'nullable|exists:tecnicos,id',
+            'observacao'       => 'required_if:tipo_servico,upgrade|nullable|string|max:1000',
+        ], [
+            'observacao.required_if' => 'A observação é obrigatória para o serviço Upgrade.',
         ]);
 
         $ordem->update($this->preencherDadosSgp($validated));
 
-        return redirect()->route('ordens.show', $ordem)
+        return redirect()->route('ordens.index')
             ->with('success', 'Ordem de serviço atualizada com sucesso!');
     }
 
-    public function enviarWhatsApp(OrdemServico $ordem, WhatsAppService $whatsApp)
+    public function enviarWhatsApp(OrdemServico $ordem, WhatsAppService $whatsApp, SgpService $sgp)
     {
+        $sincronizacao = $this->garantirSincronizacaoSgp($ordem, $sgp, Auth::user()?->name);
+
+        if ($sincronizacao['status'] !== 'synced') {
+            return back()->with('error', 'Não foi possível criar a ocorrência/OS no SGP antes do envio do WhatsApp: ' . ($sincronizacao['message'] ?? 'erro desconhecido.'));
+        }
+
         if ($whatsApp->enviarOrdemServico($ordem)) {
             $ordem->update(['status' => 'passada']);
 
@@ -136,6 +152,17 @@ class OrdemServicoController extends Controller
         $ordem->update($validated);
 
         return back()->with('success', 'Status da OS #' . $ordem->id . ' atualizado.');
+    }
+
+    public function atualizarTecnico(Request $request, OrdemServico $ordem)
+    {
+        $validated = $request->validate([
+            'tecnico_id' => 'nullable|exists:tecnicos,id',
+        ]);
+
+        $ordem->update($validated);
+
+        return back()->with('success', 'Técnico da OS #' . $ordem->id . ' atualizado.');
     }
 
     public function buscarSgp(Request $request, SgpService $sgp)
@@ -167,9 +194,45 @@ class OrdemServicoController extends Controller
             return $validated;
         }
 
-        return array_merge($validated, $dadosSgp, [
+        return array_merge($dadosSgp, $validated, [
             'sgp_cliente_link' => $validated['sgp_cliente_link'],
         ]);
+    }
+
+    private function garantirSincronizacaoSgp(OrdemServico $ordem, SgpService $sgp, ?string $usuarioResponsavel = null): array
+    {
+        if (
+            $ordem->sgp_sync_status === 'sincronizado'
+            && filled($ordem->sgp_ocorrencia_numero)
+            && filled($ordem->sgp_os_numero)
+        ) {
+            return [
+                'status' => 'synced',
+                'message' => 'Ocorrência e OS já estavam sincronizadas no SGP.',
+                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                'os_numero' => $ordem->sgp_os_numero,
+            ];
+        }
+
+        $sincronizacao = $sgp->sincronizarOcorrenciaEOrdemServico($ordem, $usuarioResponsavel);
+
+        if ($sincronizacao['status'] === 'synced') {
+            $ordem->update([
+                'sgp_ocorrencia_numero' => $sincronizacao['ocorrencia_numero'] ?? null,
+                'sgp_os_numero' => $sincronizacao['os_numero'] ?? null,
+                'sgp_sync_status' => 'sincronizado',
+                'sgp_sync_error' => null,
+            ]);
+
+            return $sincronizacao;
+        }
+
+        $ordem->update([
+            'sgp_sync_status' => $sincronizacao['status'] === 'skipped' ? 'ignorado' : 'erro',
+            'sgp_sync_error' => $sincronizacao['message'] ?? null,
+        ]);
+
+        return $sincronizacao;
     }
 
     private function statusPermitidosParaEdicao(OrdemServico $ordem): array
@@ -181,6 +244,39 @@ class OrdemServicoController extends Controller
         }
 
         return array_values(array_diff($status, ['passada']));
+    }
+
+    private function ctoInfo(OrdemServico $ordem): array
+    {
+        $onu = data_get($ordem->sgp_dados ?? [], 'contratos.0.servicos.0.onu');
+        $cto = data_get($onu, 'splitter.nome');
+        $porta = data_get($onu, 'splitter.porta');
+
+        return [
+            'cto' => $cto,
+            'porta' => $porta,
+            'label' => $cto
+                ? 'CTO: ' . $cto . ' Porta: ' . ($porta ?: 'sem porta')
+                : 'Sem CTO',
+            'has_cto' => (bool) $cto,
+            'has_porta' => filled($porta),
+        ];
+    }
+
+    private function tecnicosAtivosOrdenados(): Collection
+    {
+        return Tecnico::query()
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get();
+    }
+
+    private function tecnicosDisponiveisOrdenados(): Collection
+    {
+        return Tecnico::query()
+            ->orderByDesc('ativo')
+            ->orderBy('nome')
+            ->get();
     }
 
     public function destroy(OrdemServico $ordem)

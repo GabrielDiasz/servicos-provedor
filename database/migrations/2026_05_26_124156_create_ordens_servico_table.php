@@ -35,7 +35,7 @@ return new class extends Migration
             ])->default('pendente');
             $table->date('data_marcacao');
             $table->text('observacao')->nullable();
-            $table->foreignId('tecnico_id')->constrained('tecnicos')->restrictOnDelete();
+            $table->foreignId('tecnico_id')->nullable()->constrained('tecnicos')->restrictOnDelete();
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->timestamps();
         });

@@ -5,7 +5,24 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        @php
+            $routeName = request()->route()?->getName();
+            $routeTitles = [
+                'login' => 'Entrar',
+                'password.request' => 'Recuperar Senha',
+                'password.reset' => 'Nova Senha',
+                'password.confirm' => 'Confirmar Senha',
+                'verification.notice' => 'Verificar E-mail',
+                'verification.verify' => 'Verificar E-mail',
+            ];
+
+            $pageTitle = $routeTitles[$routeName] ?? config('app.name', 'Laravel');
+        @endphp
+
+        <title>{{ $pageTitle }} | GPR Fibra</title>
+        <link rel="icon" type="image/png" href="{{ asset('images/gpr-fibra-logo.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/gpr-fibra-logo.png') }}">
+        <meta name="theme-color" content="#064b31">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

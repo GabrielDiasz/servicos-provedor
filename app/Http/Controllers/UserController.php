@@ -11,7 +11,10 @@ class UserController extends Controller
 {
     public function index()
     {
-        $usuarios = User::orderBy('name')->paginate(20);
+        $usuarios = User::withCount('ordensServico')
+            ->orderBy('name')
+            ->paginate(20);
+
         return view('usuarios.index', compact('usuarios'));
     }
 

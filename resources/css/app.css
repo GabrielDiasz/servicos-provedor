@@ -1,3 +1,135 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-slate-100 text-slate-800 antialiased;
+    }
+
+    ::selection {
+        background: #ff7a00;
+        color: #ffffff;
+    }
+
+    html.dark {
+        color-scheme: dark;
+    }
+
+    html.dark body {
+        background-color: #0b1220;
+        color: #e5eef8;
+    }
+
+    html.dark header {
+        background-color: #0f172a;
+        border-color: #1f2937;
+    }
+
+    html.dark nav {
+        background-color: #062e1f;
+    }
+
+    html.dark .bg-white {
+        background-color: #111827 !important;
+    }
+
+    html.dark .bg-gray-50,
+    html.dark .bg-gray-100 {
+        background-color: #0f172a !important;
+    }
+
+    html.dark .bg-\[\#f3f6f2\] {
+        background-color: #0b1220 !important;
+    }
+
+    html.dark .bg-\[\#f5fbf4\] {
+        background-color: #0f172a !important;
+    }
+
+    html.dark .bg-\[\#fff3e6\] {
+        background-color: #1f2937 !important;
+    }
+
+    html.dark .bg-\[\#ffe3c2\] {
+        background-color: #243244 !important;
+    }
+
+    html.dark .text-gray-900,
+    html.dark .text-gray-800 {
+        color: #e5eef8 !important;
+    }
+
+    html.dark .text-gray-700 {
+        color: #cbd5e1 !important;
+    }
+
+    html.dark .text-gray-600,
+    html.dark .text-gray-500,
+    html.dark .text-gray-400 {
+        color: #94a3b8 !important;
+    }
+
+    html.dark .border-gray-200,
+    html.dark .border-gray-100,
+    html.dark .border-\[\#d7e6d9\],
+    html.dark .border-\[\#b9d9c2\],
+    html.dark .border-\[\#0c5f3a\] {
+        border-color: #1f2937 !important;
+    }
+
+    html.dark input,
+    html.dark select,
+    html.dark textarea {
+        background-color: #0f172a;
+        color: #e5eef8;
+        border-color: #334155;
+    }
+
+    html.dark table {
+        color: #e5eef8;
+    }
+
+    html.dark tbody tr:hover {
+        background-color: #0f172a;
+    }
+
+    html.dark ::selection {
+        background: #ff9a3d;
+        color: #0b1220;
+    }
+}
+
+@layer components {
+    .app-surface {
+        @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+    }
+
+    .app-field {
+        @apply rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#ff7a00] focus:ring-[#ff7a00] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
+    }
+
+    .app-select {
+        @apply appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#ff7a00] focus:ring-[#ff7a00] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
+    }
+
+    .app-btn {
+        @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2;
+    }
+
+    .app-btn-primary {
+        @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#ff7a00] text-white hover:bg-[#e96f00] focus:ring-[#ff7a00] dark:focus:ring-offset-slate-900;
+    }
+
+    .app-btn-secondary {
+        @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus:ring-[#ff7a00] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900;
+    }
+
+    .app-btn-danger {
+        @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:focus:ring-offset-slate-900;
+    }
+}
