@@ -3,7 +3,7 @@
         <h2 class="text-xl font-semibold text-gray-800 dark:text-slate-100">Editar OS #{{ $ordem->id }}</h2>
     </x-slot>
 
-    <div class="py-6 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="py-2 max-w-4xl mx-auto px-4 sm:px-2 lg:px-10">
         <div class="app-surface p-6">
 
             @if($errors->any())
@@ -24,7 +24,7 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Link do cliente no SGP</label>
                     <div class="flex gap-2">
                         <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link', $ordem->sgp_cliente_link) }}"
-                               placeholder="https://seu-sgp.exemplo/admin/cliente/3176/edit/"
+                               placeholder="Cole o link da página de cadastro do cliente no SGP"
                                class="app-field flex-1">
                         <button type="button" id="buscar-sgp"
                                 class="app-btn-secondary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-60">
@@ -47,7 +47,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Bairro *</label>
                         <input type="text" name="bairro" id="bairro" value="{{ old('bairro', $ordem->bairro) }}"
@@ -63,9 +63,7 @@
                             @endforeach
                         </select>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Turno *</label>
                         <select name="turno" class="app-select w-full" required>
@@ -76,6 +74,9 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Prioridade *</label>
                         <select name="prioridade" class="app-select w-full" required>
@@ -103,18 +104,18 @@
                                value="{{ old('data_marcacao', $ordem->data_marcacao->format('Y-m-d')) }}"
                                class="app-field w-full" required>
                     </div>
-                </div>
 
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
-                    <select name="tecnico_id" class="app-select w-full">
-                        <option value="">Sem técnico</option>
-                        @foreach($tecnicos as $tecnico)
-                            <option value="{{ $tecnico->id }}" {{ old('tecnico_id', $ordem->tecnico_id) == $tecnico->id ? 'selected' : '' }}>
-                                {{ $tecnico->nome }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
+                        <select name="tecnico_id" class="app-select w-full">
+                            <option value="">Sem técnico</option>
+                            @foreach($tecnicos as $tecnico)
+                                <option value="{{ $tecnico->id }}" {{ old('tecnico_id', $ordem->tecnico_id) == $tecnico->id ? 'selected' : '' }}>
+                                    {{ $tecnico->nome }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
 
                 <div>
