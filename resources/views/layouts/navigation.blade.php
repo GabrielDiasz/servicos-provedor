@@ -12,11 +12,11 @@
         }
     }"
     x-init="init()"
-    class="sticky top-0 z-40 border-b border-white/10 bg-[#064b31]/95 backdrop-blur-md shadow-lg transition-colors duration-300 dark:bg-[#031b13]/95"
+    class="sticky top-0 z-40 border-b-2 border-[#ff5a00] bg-[#202020] shadow-none transition-colors duration-300"
 >
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex h-16 justify-between">
+        <div class="flex h-14 justify-between">
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
@@ -52,7 +52,7 @@
                 <button
                     type="button"
                     @click="toggleDarkMode()"
-                    class="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/10 p-2 text-green-50 transition hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#ff7a00] focus:ring-offset-2 focus:ring-offset-[#064b31]"
+                    class="inline-flex items-center justify-center rounded-md border border-[#444] bg-[#303030] p-2 text-slate-200 transition hover:border-[#ff5a00] hover:bg-[#383838] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#ff5a00] focus:ring-offset-2 focus:ring-offset-[#202020]"
                     :title="darkMode ? 'Ativar tema claro' : 'Ativar tema escuro'"
                     aria-label="Alternar tema"
                 >
@@ -65,12 +65,19 @@
                     </svg>
                 </button>
 
-                <x-dropdown align="right" width="48">
+                <x-dropdown align="right" width="56">
                     <x-slot name="trigger">
-                        <button class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-medium leading-4 text-green-50 transition ease-in-out duration-150 hover:bg-white/20 hover:text-white focus:outline-none">
-                            <div>{{ Auth::user()->name }}</div>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-md border border-[#444] bg-[#303030] px-3 py-2 text-sm font-medium leading-4 text-slate-200 shadow-sm transition duration-150 ease-in-out hover:border-[#ff5a00] hover:bg-[#383838] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#ff5a00] focus:ring-offset-2 focus:ring-offset-[#202020]">
+                            <span class="flex h-7 w-7 items-center justify-center rounded-md bg-[#3a3a3a] text-white/90">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 20.25a7.5 7.5 0 0 1 15 0"/>
+                                </svg>
+                            </span>
 
-                            <div class="ms-1">
+                            <span class="max-w-[9rem] truncate">{{ Auth::user()->name }}</span>
+
+                            <div class="ms-1 text-slate-400">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
@@ -79,19 +86,34 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        {{-- <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link> --}}
+                        <div class="px-4 pt-3 pb-2">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                                Conta
+                            </p>
+                            <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                                {{ Auth::user()->name }}
+                            </p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">
+                                {{ Auth::user()->email }}
+                            </p>
+                        </div>
+
+                        <div class="my-1 h-px bg-slate-100 dark:bg-slate-700"></div>
 
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
 
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
+                            <button
+                                type="submit"
+                                class="flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm font-medium text-rose-600 transition duration-150 ease-in-out hover:bg-rose-50 focus:bg-rose-50 focus:outline-none dark:text-rose-400 dark:hover:bg-rose-500/10 dark:focus:bg-rose-500/10"
+                            >
+                                <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-8.25A2.25 2.25 0 0 0 3 5.25v13.5A2.25 2.25 0 0 0 5.25 21h8.25A2.25 2.25 0 0 0 15.75 18.75V15"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 12h8.25m0 0-3-3m3 3-3 3"/>
+                                </svg>
+                                <span>Sair</span>
+                            </button>
                         </form>
                     </x-slot>
                 </x-dropdown>
@@ -102,7 +124,7 @@
                 <button
                     type="button"
                     @click="toggleDarkMode()"
-                    class="mr-2 inline-flex items-center justify-center rounded-md p-2 text-green-50 hover:bg-white/10 focus:outline-none focus:bg-white/10 focus:text-white transition duration-150 ease-in-out"
+                    class="mr-2 inline-flex items-center justify-center rounded-md p-2 text-slate-200 hover:bg-white/10 focus:outline-none focus:bg-white/10 focus:text-white transition duration-150 ease-in-out"
                     :title="darkMode ? 'Ativar tema claro' : 'Ativar tema escuro'"
                     aria-label="Alternar tema"
                 >
@@ -115,7 +137,7 @@
                     </svg>
                 </button>
 
-                <button @click="open = ! open" class="inline-flex items-center justify-center rounded-xl p-2 text-green-50 hover:bg-white/10 hover:text-white focus:outline-none focus:bg-white/10 focus:text-white transition duration-150 ease-in-out">
+                <button @click="open = ! open" class="inline-flex items-center justify-center rounded-md p-2 text-slate-200 hover:bg-white/10 hover:text-white focus:outline-none focus:bg-white/10 focus:text-white transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -127,7 +149,7 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="space-y-1 bg-[#064b31] px-2 pt-2 pb-3">
+        <div class="space-y-1 bg-[#202020] px-2 pt-2 pb-3">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
@@ -143,10 +165,10 @@
         </div>
 
         <!-- Responsive Settings Options -->
-        <div class="border-t border-white/10 bg-[#064b31] pt-4 pb-1">
+        <div class="border-t border-[#3a3a3a] bg-[#202020] pt-4 pb-1">
             <div class="px-4">
                 <div class="font-medium text-base text-white">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-green-50/70">{{ Auth::user()->email }}</div>
+                <div class="font-medium text-sm text-slate-400">{{ Auth::user()->email }}</div>
             </div>
 
             <div class="mt-3 space-y-1">
@@ -161,7 +183,7 @@
                     <x-responsive-nav-link :href="route('logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">
-                        {{ __('Log Out') }}
+                        Sair
                     </x-responsive-nav-link>
                 </form>
             </div>

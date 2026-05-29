@@ -28,8 +28,9 @@ class WhatsAppService
         try {
             foreach ($this->mensagensOrdemServico($ordem) as $mensagem) {
                 $response = Http::timeout(config('services.whatsapp.timeout', 10))
-                    ->withToken(config('services.whatsapp.token'))
-                    ->post(rtrim(config('services.whatsapp.url'), '/') . '/send-message', [
+                    ->connectTimeout(config('services.whatsapp.connect_timeout', 3))
+                    ->when(config('services.whatsapp.token'), fn ($http, $token) => $http->withToken($token))
+                    ->post(rtrim(config('services.whatsapp.url'), '/').'/send-message', [
                         'group_id' => $ordem->tecnico->whatsappGrupo->grupo_id,
                         'message' => $mensagem,
                     ]);
@@ -63,7 +64,9 @@ class WhatsAppService
         $tipo = OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico;
         $observacao = $this->observacaoMensagem($ordem, $tipo);
         $servicosCompletos = ['instalacao', 'reativacao', 'mudanca_endereco', 'upgrade'];
+        $servicosComCtoPorta = ['mudanca_endereco'];
         $login = $this->loginPppoe($ordem);
+        $mensagemCtoPorta = $this->mensagemCtoPorta($ordem);
 
         if (in_array($ordem->tipo_servico, $servicosCompletos, true)) {
             return collect([
@@ -71,6 +74,7 @@ class WhatsAppService
                 $login,
                 $ordem->sgp_pppoe_senha,
                 $this->mensagemDadosCliente($ordem),
+                in_array($ordem->tipo_servico, $servicosComCtoPorta, true) ? $mensagemCtoPorta : null,
                 $this->telefonePrincipal($ordem),
             ])->filter()->values()->all();
         }
@@ -90,13 +94,13 @@ class WhatsAppService
 
         return collect([
             "Titular: {$ordem->cliente_nome}",
-            $ordem->sgp_data_nascimento ? 'Data de nascimento: ' . $ordem->sgp_data_nascimento->format('d/m/Y') : null,
+            $ordem->sgp_data_nascimento ? 'Data de nascimento: '.$ordem->sgp_data_nascimento->format('d/m/Y') : null,
             $ordem->sgp_cpf_cnpj ? "CPF: {$ordem->sgp_cpf_cnpj}" : null,
-            $telefones ? 'Tel :        ' . implode('        ', $telefones) : null,
-            $ordem->sgp_plano ? 'Nome do plano ' . $this->planoMensagem($ordem->sgp_plano) : null,
-            $ordem->sgp_plano ? 'velocidade kbps: ' . $this->velocidadeKbps($ordem->sgp_plano) : null,
+            $telefones ? 'Tel :        '.implode('        ', $telefones) : null,
+            $ordem->sgp_plano ? 'Nome do plano '.$this->planoMensagem($ordem->sgp_plano) : null,
+            $ordem->sgp_plano ? 'velocidade kbps: '.$this->velocidadeKbps($ordem->sgp_plano) : null,
             '',
-            $this->valorPlano($ordem) ? 'Valor do plano: ' . $this->valorPlano($ordem) : null,
+            $this->valorPlano($ordem) ? 'Valor do plano: '.$this->valorPlano($ordem) : null,
             $ordem->sgp_vencimento ? "Vencimento: {$ordem->sgp_vencimento}" : null,
         ])->filter(fn ($linha) => $linha !== null)->implode("\n");
     }
@@ -148,11 +152,11 @@ class WhatsAppService
         $observacaoNormalizada = trim($observacao);
 
         if ($ordem->tipo_servico === 'upgrade') {
-            return mb_strtoupper($tipo) . ' - ' . $observacaoNormalizada;
+            return mb_strtoupper($tipo).' - '.$observacaoNormalizada;
         }
 
         if ($observacaoNormalizada !== '') {
-            return mb_strtoupper($tipo) . ' - ' . $observacaoNormalizada;
+            return mb_strtoupper($tipo).' - '.$observacaoNormalizada;
         }
 
         return match ($ordem->tipo_servico) {
@@ -180,7 +184,7 @@ class WhatsAppService
             return null;
         }
 
-        return 'CTO: ' . $cto . ' Porta: ' . ($porta ?: 'sem porta');
+        return 'CTO: '.$cto.' Porta: '.($porta ?: 'sem porta');
     }
 
     private function loginPppoe(OrdemServico $ordem): ?string
@@ -244,11 +248,11 @@ class WhatsAppService
         $digits = preg_replace('/\D+/', '', $telefone);
 
         if (strlen($digits) === 11) {
-            return '(' . substr($digits, 0, 2) . ') ' . substr($digits, 2, 5) . '-' . substr($digits, 7);
+            return '('.substr($digits, 0, 2).') '.substr($digits, 2, 5).'-'.substr($digits, 7);
         }
 
         if (strlen($digits) === 10) {
-            return '(' . substr($digits, 0, 2) . ') ' . substr($digits, 2, 4) . '-' . substr($digits, 6);
+            return '('.substr($digits, 0, 2).') '.substr($digits, 2, 4).'-'.substr($digits, 6);
         }
 
         return $telefone ?: null;
@@ -284,4 +288,3 @@ class WhatsAppService
         return data_get($ordem->sgp_dados ?? [], 'contratos.0.servicos.0.onu');
     }
 }
-

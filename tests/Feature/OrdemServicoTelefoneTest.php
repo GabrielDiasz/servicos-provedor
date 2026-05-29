@@ -44,7 +44,7 @@ class OrdemServicoTelefoneTest extends TestCase
             ->post(route('ordens.store'), [
                 'cliente_nome' => 'Cliente Final',
                 'cliente_telefone' => '73999999999',
-                'sgp_cliente_link' => 'https://gpr.sgp.net.br/admin/cliente/5151/edit/',
+                'sgp_cliente_link' => 'https://seu-sgp.exemplo/admin/cliente/5151/edit/',
                 'bairro' => 'Tapera',
                 'tipo_servico' => 'reparo',
                 'turno' => 'manha',
@@ -146,5 +146,56 @@ class OrdemServicoTelefoneTest extends TestCase
             ->assertSessionHasErrors([
                 'observacao' => 'A observação é obrigatória para o serviço Upgrade.',
             ]);
+    }
+
+    public function test_update_nao_consulta_sgp_quando_o_link_nao_mudou_e_a_os_ja_tem_dados_sgp(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Atual',
+            'cliente_telefone' => '73999999999',
+            'sgp_cliente_link' => 'https://seu-sgp.exemplo/admin/cliente/5151/edit/',
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+            'bairro' => 'Centro',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => null,
+            'user_id' => $user->id,
+        ]);
+
+        $sgp = Mockery::mock(SgpService::class);
+        $sgp->shouldReceive('consultarClientePorLink')->never();
+        $this->app->instance(SgpService::class, $sgp);
+
+        $this->actingAs($user)
+            ->put(route('ordens.update', $ordem), [
+                'cliente_nome' => 'Cliente Editado',
+                'cliente_telefone' => '73999999999',
+                'sgp_cliente_link' => 'https://seu-sgp.exemplo/admin/cliente/5151/edit/',
+                'bairro' => 'Centro',
+                'tipo_servico' => 'reparo',
+                'turno' => 'manha',
+                'prioridade' => 'normal',
+                'status' => 'pendente',
+                'data_marcacao' => now()->toDateString(),
+                'tecnico_id' => null,
+                'observacao' => null,
+            ])
+            ->assertRedirect(route('ordens.index'));
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'cliente_nome' => 'Cliente Editado',
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+        ]);
     }
 }

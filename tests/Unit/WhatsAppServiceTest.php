@@ -11,7 +11,7 @@ class WhatsAppServiceTest extends TestCase
 {
     public function test_velocidade_kbps_para_plano_50m(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
         $method = new ReflectionMethod($service, 'velocidadeKbps');
         $method->setAccessible(true);
 
@@ -22,7 +22,7 @@ class WhatsAppServiceTest extends TestCase
 
     public function test_telefone_principal_prefere_o_numero_salvo_na_os(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'cliente_telefone' => '(73) 99999-9999',
@@ -44,7 +44,7 @@ class WhatsAppServiceTest extends TestCase
 
     public function test_mensagem_nao_duplica_observacao_quando_ela_repete_o_tipo_do_servico(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'troca_senha',
@@ -70,13 +70,13 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('TROCA DE SENHA' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('TROCA DE SENHA'."\n", $mensagens[0]);
         $this->assertStringNotContainsString(' - troca de senha', $mensagens[0]);
     }
 
     public function test_mensagem_mantem_observacao_quando_ela_traz_informacao_diferente(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'troca_senha',
@@ -107,7 +107,7 @@ class WhatsAppServiceTest extends TestCase
 
     public function test_instalacao_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'instalacao',
@@ -133,13 +133,13 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('INSTALAÇÃO' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('INSTALAÇÃO'."\n", $mensagens[0]);
         $this->assertStringNotContainsString(' - ', $mensagens[0]);
     }
 
     public function test_reativacao_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'reativacao',
@@ -165,13 +165,13 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('REATIVAÇÃO' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('REATIVAÇÃO'."\n", $mensagens[0]);
         $this->assertStringNotContainsString(' - ', $mensagens[0]);
     }
 
     public function test_desconectado_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'desconectado',
@@ -197,13 +197,13 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('DESCONECTADO' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('DESCONECTADO'."\n", $mensagens[0]);
         $this->assertStringNotContainsString(' - ', $mensagens[0]);
     }
 
     public function test_mudanca_de_endereco_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'mudanca_endereco',
@@ -219,6 +219,12 @@ class WhatsAppServiceTest extends TestCase
                             'numero' => '19',
                             'bairro' => 'TAPERA',
                         ],
+                        'onu' => [
+                            'splitter' => [
+                                'nome' => 'CA 13',
+                                'porta' => '8',
+                            ],
+                        ],
                     ]],
                 ]],
             ],
@@ -229,13 +235,14 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('MUDANÇA DE ENDEREÇO' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('MUDANÇA DE ENDEREÇO'."\n", $mensagens[0]);
         $this->assertStringNotContainsString(' - ', $mensagens[0]);
+        $this->assertTrue(in_array('CTO: CA 13 Porta: 8', $mensagens, true));
     }
 
     public function test_reparo_sem_observacao_usa_oscilacao_na_primeira_linha(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'reparo',
@@ -261,12 +268,12 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('REPARO - OSCILAÇÃO' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('REPARO - OSCILAÇÃO'."\n", $mensagens[0]);
     }
 
     public function test_troca_de_senha_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
     {
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
 
         $ordem = new OrdemServico([
             'tipo_servico' => 'troca_senha',
@@ -292,7 +299,7 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('TROCA DE SENHA' . "\n", $mensagens[0]);
+        $this->assertStringStartsWith('TROCA DE SENHA'."\n", $mensagens[0]);
         $this->assertStringNotContainsString(' - ', $mensagens[0]);
     }
 }

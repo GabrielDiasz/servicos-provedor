@@ -27,10 +27,10 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">ID do Grupo *</label>
-                    <input type="text" name="grupo_id" value="{{ old('grupo_id', '120363428623245389@g.us') }}"
+                    <input type="text" name="grupo_id" value="{{ old('grupo_id') }}"
                            class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500"
                            required>
-                    <p class="text-xs text-gray-400 mt-1">Use o ID retornado em http://localhost:3000/groups, terminando em @g.us.</p>
+                    <p class="text-xs text-gray-400 mt-1">Use o ID retornado pela rota de grupos do microserviço, sempre terminando em @g.us.</p>
                 </div>
 
                 <div class="flex gap-3 pt-2">

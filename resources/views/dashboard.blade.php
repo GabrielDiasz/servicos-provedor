@@ -27,25 +27,6 @@
 @endphp
 
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#0c5f3a] dark:text-emerald-400">
-                    Painel operacional
-                </p>
-                <h2 class="mt-1 text-2xl font-bold text-gray-900 dark:text-slate-100">Dashboard</h2>
-                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                    Dados desde {{ $inicioMes->format('d/m/Y') }} com comparação do mês anterior.
-                </p>
-            </div>
-
-            <a href="{{ route('ordens.create') }}"
-               class="inline-flex items-center justify-center rounded-xl bg-[#ff7a00] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e96f00]">
-                + Nova OS
-            </a>
-        </div>
-    </x-slot>
-
     <div class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <section class="overflow-hidden rounded-3xl border border-[#d9e8db] bg-gradient-to-r from-[#064b31] via-[#0a5f3f] to-[#ff7a00] p-6 text-white shadow-xl dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
             <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
@@ -296,3 +277,5 @@
 
     </div>
 </x-app-layout>
+
+

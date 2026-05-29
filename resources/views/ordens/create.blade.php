@@ -23,10 +23,10 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Link do cliente no SGP</label>
                     <div class="flex gap-2">
                         <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link') }}"
-                               placeholder="https://gpr.sgp.net.br/admin/cliente/3176/edit/"
+                               placeholder="https://seu-sgp.exemplo/admin/cliente/3176/edit/"
                                class="app-field flex-1">
                         <button type="button" id="buscar-sgp"
-                                class="app-btn-secondary px-4 py-2.5">
+                                class="app-btn-secondary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-60">
                             Buscar
                         </button>
                     </div>
@@ -142,9 +142,18 @@
         document.getElementById('buscar-sgp')?.addEventListener('click', async () => {
             const feedback = document.getElementById('sgp-feedback');
             const link = document.getElementById('sgp_cliente_link').value;
+            const button = document.getElementById('buscar-sgp');
+
+            if (!link.trim()) {
+                feedback.textContent = 'Informe o link ou ID do cliente no SGP antes de buscar.';
+                feedback.className = 'text-xs text-red-600 mt-1';
+                return;
+            }
 
             feedback.textContent = 'Buscando cliente no SGP...';
             feedback.className = 'text-xs text-gray-500 mt-1';
+            button.disabled = true;
+            button.textContent = 'Buscando...';
 
             try {
                 const response = await fetch('{{ route('ordens.buscar-sgp') }}', {
@@ -172,6 +181,9 @@
             } catch (error) {
                 feedback.textContent = error.message;
                 feedback.className = 'text-xs text-red-600 mt-1';
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Buscar';
             }
         });
     </script>

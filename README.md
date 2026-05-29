@@ -1,58 +1,113 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Servicos Provedor
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema Laravel para gestão de ordens de serviço da GPR Fibra, com autenticação via Breeze, interface em Tailwind, integração com WhatsApp por microserviço local e sincronização com o SGP.
 
-## About Laravel
+## Visão geral
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Cadastro e acompanhamento de OS
+- Gestão de técnicos, usuários e grupos WhatsApp
+- Dashboard com indicadores operacionais
+- Edição inline de status e técnico na listagem
+- Integração com WhatsApp apenas por ação manual do usuário
+- Sincronização com o SGP no momento do envio da OS
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requisitos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Composer
+- Node.js 20+
+- MySQL ou MariaDB
+- Google Chrome ou Microsoft Edge para o microserviço do WhatsApp
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalação
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Configuração do ambiente
 
-## Contributing
+Preencha o `.env` com as credenciais do seu ambiente. Nunca envie esse arquivo para o GitHub.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Variáveis principais:
 
-## Code of Conduct
+- `APP_URL`
+- `DB_*`
+- `WHATSAPP_SERVICE_URL`
+- `WHATSAPP_TOKEN`
+- `WHATSAPP_HOST`
+- `CHROME_PATH`
+- `SGP_BASE_URL`
+- `SGP_APP`
+- `SGP_TOKEN`
+- `SGP_WEB_USERNAME`
+- `SGP_WEB_PASSWORD`
+- `SGP_DEFAULT_RESPONSAVEL`
+- `SGP_TECH_MATCHER_A`
+- `SGP_RESPONSAVEL_A`
+- `SGP_TECH_MATCHER_B`
+- `SGP_RESPONSAVEL_B`
+- `SGP_TECH_MATCHER_C`
+- `SGP_RESPONSAVEL_C`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `WHATSAPP_TEST_GROUP_ID`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+O `DatabaseSeeder` só cria o usuário admin e o grupo de teste quando essas variáveis estiverem preenchidas.
 
-## Security Vulnerabilities
+## WhatsApp
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+O projeto usa um microserviço Node com `whatsapp-web.js`.
 
-## License
+Para iniciar:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+node whatsapp-server.js
+```
+
+O serviço expõe, por padrão:
+
+- `http://127.0.0.1:3000/status`
+- `http://127.0.0.1:3000/groups`
+- `http://127.0.0.1:3000/send-message`
+
+Se você definir `WHATSAPP_TOKEN`, o microserviço exige autenticação Bearer nas requisições.
+
+## SGP
+
+A integração com o SGP é feita por login web autenticado e depende das credenciais configuradas em `SGP_WEB_USERNAME` e `SGP_WEB_PASSWORD`.
+
+## Execução local
+
+```bash
+php artisan serve
+```
+
+Em outro terminal, deixe o microserviço do WhatsApp ativo:
+
+```bash
+node whatsapp-server.js
+```
+
+## Testes
+
+```bash
+php artisan test
+```
+
+## Segurança
+
+- Não comite `.env`
+- Não comite `.whatsapp-session`
+- Não comite `.wwebjs_cache`
+- Não exponha tokens, senhas, IDs de grupos ou credenciais do SGP em arquivos públicos
+- Use placeholders no `.env.example` e documente os valores reais apenas fora do repositório
+
+## Observação
+
+Se o projeto já tiver publicado algum segredo em histórico Git, o ideal é rotacionar essas credenciais e reescrever o histórico com cuidado.

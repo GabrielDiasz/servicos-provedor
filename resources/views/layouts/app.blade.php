@@ -56,7 +56,7 @@
             x-data="{ busy: false, busyLabel: 'Processando...' }"
             @busy-start.window="busy = true; busyLabel = $event.detail?.label || 'Processando...'"
             @busy-stop.window="busy = false"
-            class="min-h-screen bg-gradient-to-b from-[#f3f6f2] via-[#f7faf7] to-[#edf3ef] dark:from-[#0b1220] dark:via-[#0b1220] dark:to-[#0b1220]"
+            class="min-h-screen bg-gradient-to-b from-[#f3f6f2] via-[#f7faf7] to-[#edf3ef] dark:from-[#2b2b2b] dark:via-[#2f2f2f] dark:to-[#262626]"
         >
             @include('layouts.navigation')
 
@@ -76,32 +76,80 @@
             </div>
 
             @if(session('success') || session('error'))
+                @php
+                    $toastType = session('success') ? 'success' : 'error';
+                    $toastMessage = session('success') ?: session('error');
+                    $toastTitle = $toastType === 'success' ? 'Tudo certo' : 'Atenção';
+                    $toastClasses = $toastType === 'success'
+                        ? 'border-emerald-200/80 bg-[#ffffff] text-emerald-950 shadow-emerald-950/10 dark:border-emerald-400/20 dark:bg-[#17251f] dark:text-emerald-50'
+                        : 'border-rose-200/80 bg-[#ffffff] text-rose-950 shadow-rose-950/10 dark:border-rose-400/20 dark:bg-[#291b22] dark:text-rose-50';
+                    $toastIconClasses = $toastType === 'success'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-rose-500 text-white';
+                    $toastBarClasses = $toastType === 'success'
+                        ? 'bg-emerald-500'
+                        : 'bg-rose-500';
+                @endphp
+
                 <div
                     x-data="{ visible: true }"
-                    x-init="setTimeout(() => visible = false, 3000)"
+                    x-init="setTimeout(() => visible = false, 4200)"
                     x-show="visible"
                     x-cloak
-                    x-transition.opacity
-                    class="fixed right-4 top-20 z-50 flex w-[min(100vw-2rem,24rem)] justify-end pointer-events-none"
+                    x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="translate-y-2 opacity-0 sm:translate-x-4 sm:translate-y-0"
+                    x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
+                    x-transition:leave="transition ease-in duration-200"
+                    x-transition:leave-start="translate-y-0 opacity-100 sm:translate-x-0"
+                    x-transition:leave-end="translate-y-2 opacity-0 sm:translate-x-4 sm:translate-y-0"
+                    class="pointer-events-none fixed right-4 top-20 z-50 flex w-[min(100vw-2rem,26rem)] justify-end"
                 >
-                    @if(session('success'))
-                        <div class="pointer-events-auto rounded-2xl border border-green-200 bg-white px-4 py-3 text-sm text-green-900 shadow-2xl ring-1 ring-black/5">
-                            {{ session('success') }}
+                    <div class="pointer-events-auto relative overflow-hidden rounded-2xl border px-4 py-3.5 shadow-2xl ring-1 ring-black/5 backdrop-blur {{ $toastClasses }}">
+                        <div class="flex gap-3">
+                            <div class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm {{ $toastIconClasses }}">
+                                @if($toastType === 'success')
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/>
+                                    </svg>
+                                @else
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5m0 4h.01"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.4 2.8 17.5A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.5L13.7 4.4a2 2 0 0 0-3.4 0Z"/>
+                                    </svg>
+                                @endif
+                            </div>
+
+                            <div class="min-w-0 flex-1 pr-6">
+                                <p class="text-sm font-semibold leading-5">{{ $toastTitle }}</p>
+                                <p class="mt-0.5 text-sm leading-5 opacity-80">{{ $toastMessage }}</p>
+                            </div>
+
+                            <button
+                                type="button"
+                                @click="visible = false"
+                                class="absolute right-3 top-3 rounded-full p-1 text-current opacity-55 transition hover:bg-black/5 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-current/30 dark:hover:bg-white/10"
+                                aria-label="Fechar notificação"
+                            >
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 6 12 12M18 6 6 18"/>
+                                </svg>
+                            </button>
                         </div>
-                    @endif
-                    @if(session('error'))
-                        <div class="pointer-events-auto rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm text-red-900 shadow-2xl ring-1 ring-black/5">
-                            {{ session('error') }}
+
+                        <div class="absolute inset-x-0 bottom-0 h-1 bg-black/5 dark:bg-white/10">
+                            <div class="h-full origin-left animate-toast-progress {{ $toastBarClasses }}"></div>
                         </div>
-                    @endif
+                    </div>
                 </div>
             @endif
 
             <!-- Page Heading -->
             @isset($header)
-                <header class="bg-white/90 border-b border-[#d7e6d9] shadow-sm backdrop-blur dark:bg-slate-900/90 dark:border-slate-800">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
+                <header class="border-b border-transparent bg-transparent">
+                    <div class="mx-auto max-w-7xl px-4 pt-5 pb-2 sm:px-6 lg:px-8">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                            {{ $header }}
+                        </div>
                     </div>
                 </header>
             @endisset

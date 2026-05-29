@@ -40,16 +40,24 @@ return [
         'url' => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3000'),
         'token' => env('WHATSAPP_TOKEN'),
         'timeout' => env('WHATSAPP_TIMEOUT', 10),
+        'connect_timeout' => env('WHATSAPP_CONNECT_TIMEOUT', 3),
     ],
 
     'sgp' => [
         'enabled' => env('SGP_ENABLED', true),
-        'url' => env('SGP_BASE_URL', 'https://gpr.sgp.net.br'),
+        'url' => env('SGP_BASE_URL', 'https://seu-sgp.exemplo'),
         'app' => env('SGP_APP'),
         'token' => env('SGP_TOKEN'),
         'web_username' => env('SGP_WEB_USERNAME'),
         'web_password' => env('SGP_WEB_PASSWORD'),
+        'default_responsavel' => env('SGP_DEFAULT_RESPONSAVEL'),
+        'tecnico_responsavel_map' => [
+            env('SGP_TECH_MATCHER_A') => env('SGP_RESPONSAVEL_A'),
+            env('SGP_TECH_MATCHER_B') => env('SGP_RESPONSAVEL_B'),
+            env('SGP_TECH_MATCHER_C') => env('SGP_RESPONSAVEL_C'),
+        ],
         'timeout' => env('SGP_TIMEOUT', 15),
+        'connect_timeout' => env('SGP_CONNECT_TIMEOUT', 5),
     ],
 
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrdemServico;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -11,7 +12,9 @@ class UserController extends Controller
 {
     public function index()
     {
-        $usuarios = User::withCount('ordensServico')
+        $usuarios = User::withCount([
+            'ordensServico as ordens_abertas_count' => fn ($query) => $query->whereIn('status', OrdemServico::STATUS_ABERTOS),
+        ])
             ->orderBy('name')
             ->paginate(20);
 
@@ -26,9 +29,9 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email',
-            'perfil'   => 'required|in:admin,atendente',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'perfil' => 'required|in:admin,atendente',
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
@@ -48,10 +51,14 @@ class UserController extends Controller
     public function update(Request $request, User $usuario)
     {
         $validated = $request->validate([
-            'name'   => 'required|string|max:255',
-            'email'  => 'required|email|max:255|unique:users,email,' . $usuario->id,
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,'.$usuario->id,
             'perfil' => 'required|in:admin,atendente',
         ]);
+
+        if ($usuario->isAdmin() && $validated['perfil'] !== 'admin' && $this->ehUltimoAdmin($usuario)) {
+            return back()->with('error', 'Mantenha pelo menos um usuário administrador ativo.');
+        }
 
         // Só altera senha se preenchida
         if ($request->filled('password')) {
@@ -73,6 +80,10 @@ class UserController extends Controller
             return back()->with('error', 'Você não pode excluir seu próprio usuário.');
         }
 
+        if ($usuario->isAdmin() && $this->ehUltimoAdmin($usuario)) {
+            return back()->with('error', 'Mantenha pelo menos um usuário administrador ativo.');
+        }
+
         if ($usuario->ordensServico()->exists()) {
             return back()->with('error', 'Não é possível excluir um usuário com ordens de serviço vinculadas.');
         }
@@ -81,5 +92,12 @@ class UserController extends Controller
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuário removido.');
+    }
+
+    private function ehUltimoAdmin(User $usuario): bool
+    {
+        return ! User::where('perfil', 'admin')
+            ->whereKeyNot($usuario->id)
+            ->exists();
     }
 }

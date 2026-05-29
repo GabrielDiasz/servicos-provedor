@@ -4,186 +4,192 @@ namespace App\Http\Controllers;
 
 use App\Models\OrdemServico;
 use App\Models\Tecnico;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $agora = now();
-        $inicioMes = $agora->copy()->startOfMonth();
-        $inicioMesAnterior = $agora->copy()->subMonthNoOverflow()->startOfMonth();
-        $fimMesAnterior = $inicioMes->copy()->subSecond();
-        $statusAbertos = ['pendente', 'passada', 'retornar', 'sem_contato', 'sem_viabilidade'];
-        $statusResumo = ['pendente', 'passada', 'retornar', 'sem_contato', 'sem_viabilidade'];
+        $cacheKey = 'dashboard:summary:'.now()->format('Y-m-d-H-i');
 
-        $tecnicosAtivos = Tecnico::where('ativo', true)->count();
+        $data = Cache::remember($cacheKey, 60, function () {
+            $agora = now();
+            $inicioMes = $agora->copy()->startOfMonth();
+            $inicioMesAnterior = $agora->copy()->subMonthNoOverflow()->startOfMonth();
+            $fimMesAnterior = $inicioMes->copy()->subSecond();
+            $statusAbertos = OrdemServico::STATUS_ABERTOS;
+            $statusResumo = OrdemServico::STATUS_ABERTOS;
 
-        $servicosConcluidosNoMes = OrdemServico::query()
-            ->where('status', 'concluida')
-            ->whereBetween('updated_at', [$inicioMes, $agora])
-            ->count();
+            $tecnicosAtivos = Tecnico::where('ativo', true)->count();
 
-        $servicosConcluidosMesAnterior = OrdemServico::query()
-            ->where('status', 'concluida')
-            ->whereBetween('updated_at', [$inicioMesAnterior, $fimMesAnterior])
-            ->count();
+            $servicosConcluidosNoMes = OrdemServico::query()
+                ->where('status', 'concluida')
+                ->whereBetween('updated_at', [$inicioMes, $agora])
+                ->count();
 
-        $osCriadasNoMes = OrdemServico::query()
-            ->whereBetween('created_at', [$inicioMes, $agora])
-            ->count();
+            $servicosConcluidosMesAnterior = OrdemServico::query()
+                ->where('status', 'concluida')
+                ->whereBetween('updated_at', [$inicioMesAnterior, $fimMesAnterior])
+                ->count();
 
-        $osCriadasMesAnterior = OrdemServico::query()
-            ->whereBetween('created_at', [$inicioMesAnterior, $fimMesAnterior])
-            ->count();
+            $osCriadasNoMes = OrdemServico::query()
+                ->whereBetween('created_at', [$inicioMes, $agora])
+                ->count();
 
-        $osAbertas = OrdemServico::query()
-            ->whereIn('status', $statusAbertos)
-            ->count();
+            $osCriadasMesAnterior = OrdemServico::query()
+                ->whereBetween('created_at', [$inicioMesAnterior, $fimMesAnterior])
+                ->count();
 
-        $servicosPorTecnico = OrdemServico::query()
-            ->select('tecnico_id', DB::raw('COUNT(*) as total'))
-            ->with('tecnico:id,nome')
-            ->where('status', 'concluida')
-            ->whereBetween('updated_at', [$inicioMes, $agora])
-            ->groupBy('tecnico_id')
-            ->get()
-            ->mapWithKeys(fn ($row) => [$row->tecnico_id => (int) $row->total]);
+            $osAbertas = OrdemServico::query()
+                ->whereIn('status', $statusAbertos)
+                ->count();
 
-        $osAbertasPorTecnico = OrdemServico::query()
-            ->select('tecnico_id', DB::raw('COUNT(*) as total'))
-            ->with('tecnico:id,nome')
-            ->whereIn('status', $statusAbertos)
-            ->groupBy('tecnico_id')
-            ->get()
-            ->mapWithKeys(fn ($row) => [$row->tecnico_id => (int) $row->total]);
+            $servicosPorTecnico = OrdemServico::query()
+                ->select('tecnico_id', DB::raw('COUNT(*) as total'))
+                ->where('status', 'concluida')
+                ->whereBetween('updated_at', [$inicioMes, $agora])
+                ->groupBy('tecnico_id')
+                ->pluck('total', 'tecnico_id')
+                ->map(fn ($total) => (int) $total);
 
-        $tecnicosBase = Tecnico::query()
-            ->where('ativo', true)
-            ->orderBy('nome')
-            ->get();
+            $osAbertasPorTecnico = OrdemServico::query()
+                ->select('tecnico_id', DB::raw('COUNT(*) as total'))
+                ->whereIn('status', $statusAbertos)
+                ->groupBy('tecnico_id')
+                ->pluck('total', 'tecnico_id')
+                ->map(fn ($total) => (int) $total);
 
-        $tecnicos = $tecnicosBase
-            ->map(function (Tecnico $tecnico) use ($servicosPorTecnico) {
-                $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
+            $tecnicosBase = Tecnico::query()
+                ->where('ativo', true)
+                ->select(['id', 'nome', 'ativo'])
+                ->orderBy('nome')
+                ->get();
 
-                return $tecnico;
-            })
-            ->sortByDesc('servicos_mes')
-            ->values();
+            $tecnicos = $tecnicosBase
+                ->map(function (Tecnico $tecnico) use ($servicosPorTecnico) {
+                    $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
 
-        $tecnicosSobrecarga = $tecnicosBase
-            ->map(function (Tecnico $tecnico) use ($servicosPorTecnico, $osAbertasPorTecnico) {
-                $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
-                $tecnico->os_abertas = (int) ($osAbertasPorTecnico[$tecnico->id] ?? 0);
+                    return $tecnico;
+                })
+                ->sortByDesc('servicos_mes')
+                ->values();
 
-                return $tecnico;
-            })
-            ->filter(fn (Tecnico $tecnico) => $tecnico->os_abertas >= 5)
-            ->sortByDesc('os_abertas')
-            ->values();
+            $tecnicosSobrecarga = $tecnicosBase
+                ->map(function (Tecnico $tecnico) use ($servicosPorTecnico, $osAbertasPorTecnico) {
+                    $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
+                    $tecnico->os_abertas = (int) ($osAbertasPorTecnico[$tecnico->id] ?? 0);
 
-        $servicosConcluidosPorTipo = OrdemServico::query()
-            ->select('tipo_servico', DB::raw('COUNT(*) as total'))
-            ->where('status', 'concluida')
-            ->whereBetween('updated_at', [$inicioMes, $agora])
-            ->groupBy('tipo_servico')
-            ->pluck('total', 'tipo_servico');
+                    return $tecnico;
+                })
+                ->filter(fn (Tecnico $tecnico) => $tecnico->os_abertas >= 5)
+                ->sortByDesc('os_abertas')
+                ->values();
 
-        $tiposServico = collect(OrdemServico::TIPOS)
-            ->map(function ($label, $key) use ($servicosConcluidosPorTipo) {
+            $servicosConcluidosPorTipo = OrdemServico::query()
+                ->select('tipo_servico', DB::raw('COUNT(*) as total'))
+                ->where('status', 'concluida')
+                ->whereBetween('updated_at', [$inicioMes, $agora])
+                ->groupBy('tipo_servico')
+                ->pluck('total', 'tipo_servico');
+
+            $tiposServico = collect(OrdemServico::TIPOS)
+                ->map(function ($label, $key) use ($servicosConcluidosPorTipo) {
+                    return [
+                        'key' => $key,
+                        'label' => $label,
+                        'total' => (int) ($servicosConcluidosPorTipo[$key] ?? 0),
+                    ];
+                })
+                ->sortByDesc('total')
+                ->values();
+
+            $statusAbertosPorStatus = OrdemServico::query()
+                ->select('status', DB::raw('COUNT(*) as total'))
+                ->whereIn('status', $statusResumo)
+                ->groupBy('status')
+                ->pluck('total', 'status');
+
+            $statusAbertosResumo = collect($statusResumo)
+                ->map(function (string $status) use ($statusAbertosPorStatus) {
+                    return [
+                        'key' => $status,
+                        'label' => OrdemServico::STATUS[$status] ?? $status,
+                        'total' => (int) ($statusAbertosPorStatus[$status] ?? 0),
+                    ];
+                })
+                ->values();
+
+            $osAbertasPorTipoCounts = OrdemServico::query()
+                ->select('tipo_servico', DB::raw('COUNT(*) as total'))
+                ->whereIn('status', $statusAbertos)
+                ->groupBy('tipo_servico')
+                ->pluck('total', 'tipo_servico');
+
+            $osAbertasPorTipo = collect(OrdemServico::TIPOS)
+                ->map(function ($label, $key) use ($osAbertasPorTipoCounts) {
+                    return [
+                        'key' => $key,
+                        'label' => $label,
+                        'total' => (int) ($osAbertasPorTipoCounts[$key] ?? 0),
+                    ];
+                })
+                ->sortByDesc('total')
+                ->values();
+
+            $clientesComMaisAbertas = OrdemServico::query()
+                ->selectRaw('COALESCE(sgp_cliente_id, cliente_nome) as cliente_key, MAX(cliente_nome) as cliente_nome, MAX(cliente_telefone) as cliente_telefone, COUNT(*) as total')
+                ->whereIn('status', $statusAbertos)
+                ->groupByRaw('COALESCE(sgp_cliente_id, cliente_nome)')
+                ->orderByDesc('total')
+                ->limit(10)
+                ->get();
+
+            $maiorQuantidadeTecnico = max($tecnicos->pluck('servicos_mes')->max() ?? 0, 1);
+            $maiorQuantidadeTipoConcluido = max($tiposServico->pluck('total')->max() ?? 0, 1);
+            $maiorQuantidadeTipoAberto = max($osAbertasPorTipo->pluck('total')->max() ?? 0, 1);
+
+            $comparativo = function (int $atual, int $anterior): array {
+                $delta = $atual - $anterior;
+                $percentual = $anterior > 0
+                    ? round((($atual - $anterior) / $anterior) * 100, 1)
+                    : ($atual > 0 ? 100.0 : 0.0);
+
                 return [
-                    'key' => $key,
-                    'label' => $label,
-                    'total' => (int) ($servicosConcluidosPorTipo[$key] ?? 0),
+                    'atual' => $atual,
+                    'anterior' => $anterior,
+                    'delta' => $delta,
+                    'percentual' => $percentual,
+                    'direcao' => $delta > 0 ? 'alta' : ($delta < 0 ? 'baixa' : 'igual'),
                 ];
-            })
-            ->sortByDesc('total')
-            ->values();
+            };
 
-        $statusAbertosPorStatus = OrdemServico::query()
-            ->select('status', DB::raw('COUNT(*) as total'))
-            ->whereIn('status', $statusResumo)
-            ->groupBy('status')
-            ->pluck('total', 'status');
+            $metricasConclusao = $comparativo($servicosConcluidosNoMes, $servicosConcluidosMesAnterior);
+            $metricasCriacao = $comparativo($osCriadasNoMes, $osCriadasMesAnterior);
 
-        $statusAbertosResumo = collect($statusResumo)
-            ->map(function (string $status) use ($statusAbertosPorStatus) {
-                return [
-                    'key' => $status,
-                    'label' => OrdemServico::STATUS[$status] ?? $status,
-                    'total' => (int) ($statusAbertosPorStatus[$status] ?? 0),
-                ];
-            })
-            ->values();
+            return compact(
+                'inicioMes',
+                'inicioMesAnterior',
+                'tecnicosAtivos',
+                'servicosConcluidosNoMes',
+                'servicosConcluidosMesAnterior',
+                'osCriadasNoMes',
+                'osCriadasMesAnterior',
+                'osAbertas',
+                'tecnicos',
+                'tecnicosSobrecarga',
+                'tiposServico',
+                'statusAbertosResumo',
+                'osAbertasPorTipo',
+                'clientesComMaisAbertas',
+                'maiorQuantidadeTecnico',
+                'maiorQuantidadeTipoConcluido',
+                'maiorQuantidadeTipoAberto',
+                'metricasConclusao',
+                'metricasCriacao'
+            );
+        });
 
-        $osAbertasPorTipoCounts = OrdemServico::query()
-            ->select('tipo_servico', DB::raw('COUNT(*) as total'))
-            ->whereIn('status', $statusAbertos)
-            ->groupBy('tipo_servico')
-            ->pluck('total', 'tipo_servico');
-
-        $osAbertasPorTipo = collect(OrdemServico::TIPOS)
-            ->map(function ($label, $key) use ($osAbertasPorTipoCounts) {
-                return [
-                    'key' => $key,
-                    'label' => $label,
-                    'total' => (int) ($osAbertasPorTipoCounts[$key] ?? 0),
-                ];
-            })
-            ->sortByDesc('total')
-            ->values();
-
-        $clientesComMaisAbertas = OrdemServico::query()
-            ->selectRaw('COALESCE(sgp_cliente_id, cliente_nome) as cliente_key, MAX(cliente_nome) as cliente_nome, MAX(cliente_telefone) as cliente_telefone, COUNT(*) as total')
-            ->whereIn('status', $statusAbertos)
-            ->groupByRaw('COALESCE(sgp_cliente_id, cliente_nome)')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get();
-
-        $maiorQuantidadeTecnico = max($tecnicos->pluck('servicos_mes')->max() ?? 0, 1);
-        $maiorQuantidadeTipoConcluido = max($tiposServico->pluck('total')->max() ?? 0, 1);
-        $maiorQuantidadeTipoAberto = max($osAbertasPorTipo->pluck('total')->max() ?? 0, 1);
-
-        $comparativo = function (int $atual, int $anterior): array {
-            $delta = $atual - $anterior;
-            $percentual = $anterior > 0
-                ? round((($atual - $anterior) / $anterior) * 100, 1)
-                : ($atual > 0 ? 100.0 : 0.0);
-
-            return [
-                'atual' => $atual,
-                'anterior' => $anterior,
-                'delta' => $delta,
-                'percentual' => $percentual,
-                'direcao' => $delta > 0 ? 'alta' : ($delta < 0 ? 'baixa' : 'igual'),
-            ];
-        };
-
-        $metricasConclusao = $comparativo($servicosConcluidosNoMes, $servicosConcluidosMesAnterior);
-        $metricasCriacao = $comparativo($osCriadasNoMes, $osCriadasMesAnterior);
-
-        return view('dashboard', compact(
-            'inicioMes',
-            'inicioMesAnterior',
-            'tecnicosAtivos',
-            'servicosConcluidosNoMes',
-            'servicosConcluidosMesAnterior',
-            'osCriadasNoMes',
-            'osCriadasMesAnterior',
-            'osAbertas',
-            'tecnicos',
-            'tecnicosSobrecarga',
-            'tiposServico',
-            'statusAbertosResumo',
-            'osAbertasPorTipo',
-            'clientesComMaisAbertas',
-            'maiorQuantidadeTecnico',
-            'maiorQuantidadeTipoConcluido',
-            'maiorQuantidadeTipoAberto',
-            'metricasConclusao',
-            'metricasCriacao'
-        ));
+        return view('dashboard', $data);
     }
 }

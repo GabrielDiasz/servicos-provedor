@@ -14,19 +14,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::updateOrCreate([
-            'email' => env('ADMIN_EMAIL', 'admin@gpr.com'),
-        ], [
-            'name' => env('ADMIN_NAME', 'Administrador'),
-            'perfil' => 'admin',
-            'password' => Hash::make(env('ADMIN_PASSWORD', '12345678')),
-        ]);
+        $adminEmail = trim((string) env('ADMIN_EMAIL', ''));
+        $adminPassword = trim((string) env('ADMIN_PASSWORD', ''));
 
-        WhatsAppGrupo::updateOrCreate([
-            'grupo_id' => env('WHATSAPP_TEST_GROUP_ID', '120363428623245389@g.us'),
-        ], [
-            'nome' => env('WHATSAPP_TEST_GROUP_NAME', 'Grupo de Teste'),
-            'ativo' => true,
-        ]);
+        if ($adminEmail !== '' && $adminPassword !== '') {
+            User::updateOrCreate([
+                'email' => $adminEmail,
+            ], [
+                'name' => env('ADMIN_NAME', 'Administrador'),
+                'perfil' => 'admin',
+                'password' => Hash::make($adminPassword),
+            ]);
+        }
+
+        $grupoId = trim((string) env('WHATSAPP_TEST_GROUP_ID', ''));
+        $grupoNome = trim((string) env('WHATSAPP_TEST_GROUP_NAME', ''));
+
+        if ($grupoId !== '' && $grupoNome !== '') {
+            WhatsAppGrupo::updateOrCreate([
+                'grupo_id' => $grupoId,
+            ], [
+                'nome' => $grupoNome,
+                'ativo' => true,
+            ]);
+        }
     }
 }

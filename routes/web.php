@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\TecnicoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WhatsAppGrupoController;
@@ -39,4 +39,4 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('can:gerenciar-usuarios');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

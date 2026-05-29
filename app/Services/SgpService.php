@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\OrdemServico;
 use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -44,7 +45,7 @@ class SgpService
             ];
         }
 
-        $cookieJar = new CookieJar();
+        $cookieJar = new CookieJar;
 
         try {
             $ocorrenciaPath = "/admin/atendimento/cliente/{$ordem->sgp_cliente_id}/ocorrencia/add/";
@@ -87,7 +88,7 @@ class SgpService
             $ocorrenciaResponse = $this->enviarFormularioWeb($cookieJar, $ocorrenciaPath, $ocorrenciaPayload);
 
             if ($ocorrenciaResponse->status() !== 302) {
-                throw new \RuntimeException('O SGP nÃ£o redirecionou apÃ³s criar a ocorrÃªncia.');
+                throw new \RuntimeException('O SGP não redirecionou após criar a ocorrência.');
             }
 
             $osPath = $this->normalizarCaminhoSgp($ocorrenciaResponse->header('Location') ?: '');
@@ -156,15 +157,21 @@ class SgpService
 
     public function consultarClientePorLink(?string $link): ?array
     {
+        $link = trim((string) $link);
+
+        if ($link === '') {
+            return null;
+        }
+
         $clienteId = $this->extrairClienteIdDoLink($link);
 
         if ($clienteId) {
             return $this->consultarClientePorId($clienteId);
         }
 
-        if (preg_match('~^\d+$~', trim((string) $link))) {
-            return $this->consultarClientePorId(trim((string) $link))
-                ?? $this->consultarClientePorContrato(trim((string) $link));
+        if (preg_match('~^\d+$~', $link)) {
+            return $this->consultarClientePorId($link)
+                ?? $this->consultarClientePorContrato($link);
         }
 
         return null;
@@ -176,38 +183,43 @@ class SgpService
             return null;
         }
 
-        try {
-            $response = Http::timeout(config('services.sgp.timeout', 15))
-                ->withHeaders(['Expect' => ''])
-                ->asForm()
-                ->post(rtrim(config('services.sgp.url'), '/') . '/api/ura/clientes/', [
-                    'app' => config('services.sgp.app'),
-                    'token' => config('services.sgp.token'),
-                    'id' => $clienteId,
-                    'cliente_id' => $clienteId,
-                ]);
+        $cacheKey = 'sgp:cliente:id:'.trim((string) $clienteId);
 
-            if ($response->failed()) {
-                Log::warning('Falha ao consultar cliente por ID no SGP.', [
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($clienteId) {
+            try {
+                $response = Http::timeout(config('services.sgp.timeout', 15))
+                    ->connectTimeout(config('services.sgp.connect_timeout', 5))
+                    ->withHeaders(['Expect' => ''])
+                    ->asForm()
+                    ->post(rtrim(config('services.sgp.url'), '/').'/api/ura/clientes/', [
+                        'app' => config('services.sgp.app'),
+                        'token' => config('services.sgp.token'),
+                        'id' => $clienteId,
+                        'cliente_id' => $clienteId,
+                    ]);
+
+                if ($response->failed()) {
+                    Log::warning('Falha ao consultar cliente por ID no SGP.', [
+                        'cliente_id' => $clienteId,
+                        'status' => $response->status(),
+                        'resposta' => $response->json() ?: $response->body(),
+                    ]);
+
+                    return null;
+                }
+
+                $cliente = Arr::first($response->json('clientes', []));
+
+                return $cliente ? $this->normalizarCliente($cliente) : null;
+            } catch (\Throwable $exception) {
+                Log::warning('Erro ao consultar cliente por ID no SGP.', [
                     'cliente_id' => $clienteId,
-                    'status' => $response->status(),
-                    'resposta' => $response->json() ?: $response->body(),
+                    'erro' => $exception->getMessage(),
                 ]);
 
                 return null;
             }
-
-            $cliente = Arr::first($response->json('clientes', []));
-
-            return $cliente ? $this->normalizarCliente($cliente) : null;
-        } catch (\Throwable $exception) {
-            Log::warning('Erro ao consultar cliente por ID no SGP.', [
-                'cliente_id' => $clienteId,
-                'erro' => $exception->getMessage(),
-            ]);
-
-            return null;
-        }
+        });
     }
 
     public function consultarClientePorContrato(string|int $contrato): ?array
@@ -216,36 +228,41 @@ class SgpService
             return null;
         }
 
-        try {
-            $response = Http::timeout(config('services.sgp.timeout', 15))
-                ->asForm()
-                ->post(rtrim(config('services.sgp.url'), '/') . '/api/ura/consultacliente/', [
-                    'app' => config('services.sgp.app'),
-                    'token' => config('services.sgp.token'),
-                    'contrato' => $contrato,
-                ]);
+        $cacheKey = 'sgp:cliente:contrato:'.trim((string) $contrato);
 
-            if ($response->failed()) {
-                Log::warning('Falha ao consultar cliente no SGP.', [
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($contrato) {
+            try {
+                $response = Http::timeout(config('services.sgp.timeout', 15))
+                    ->connectTimeout(config('services.sgp.connect_timeout', 5))
+                    ->asForm()
+                    ->post(rtrim(config('services.sgp.url'), '/').'/api/ura/consultacliente/', [
+                        'app' => config('services.sgp.app'),
+                        'token' => config('services.sgp.token'),
+                        'contrato' => $contrato,
+                    ]);
+
+                if ($response->failed()) {
+                    Log::warning('Falha ao consultar cliente no SGP.', [
+                        'contrato' => $contrato,
+                        'status' => $response->status(),
+                        'resposta' => $response->json() ?: $response->body(),
+                    ]);
+
+                    return null;
+                }
+
+                $contratoSgp = Arr::first($response->json('contratos', []));
+
+                return $contratoSgp ? $this->normalizarContrato($contratoSgp) : null;
+            } catch (\Throwable $exception) {
+                Log::warning('Erro ao consultar cliente no SGP.', [
                     'contrato' => $contrato,
-                    'status' => $response->status(),
-                    'resposta' => $response->json() ?: $response->body(),
+                    'erro' => $exception->getMessage(),
                 ]);
 
                 return null;
             }
-
-            $contratoSgp = Arr::first($response->json('contratos', []));
-
-            return $contratoSgp ? $this->normalizarContrato($contratoSgp) : null;
-        } catch (\Throwable $exception) {
-            Log::warning('Erro ao consultar cliente no SGP.', [
-                'contrato' => $contrato,
-                'erro' => $exception->getMessage(),
-            ]);
-
-            return null;
-        }
+        });
     }
 
     public function extrairClienteIdDoLink(?string $link): ?string
@@ -332,9 +349,9 @@ class SgpService
         ])));
 
         $extras = trim(implode(', ', array_filter([
-            isset($endereco['complemento']) && $endereco['complemento'] !== '' ? 'Complemento: ' . $endereco['complemento'] : null,
-            isset($endereco['pontoreferencia']) && $endereco['pontoreferencia'] !== '' ? 'ReferÃªncia: ' . $endereco['pontoreferencia'] : null,
-            isset($endereco['ponto_referencia']) && $endereco['ponto_referencia'] !== '' ? 'ReferÃªncia: ' . $endereco['ponto_referencia'] : null,
+            isset($endereco['complemento']) && $endereco['complemento'] !== '' ? 'Complemento: '.$endereco['complemento'] : null,
+            isset($endereco['pontoreferencia']) && $endereco['pontoreferencia'] !== '' ? 'Referência: '.$endereco['pontoreferencia'] : null,
+            isset($endereco['ponto_referencia']) && $endereco['ponto_referencia'] !== '' ? 'Referência: '.$endereco['ponto_referencia'] : null,
         ])));
 
         return trim(implode(', ', array_filter([$logradouro, $extras]))) ?: null;
@@ -343,23 +360,25 @@ class SgpService
     private function autenticarPortalWeb(CookieJar $cookies, string $nextPath): void
     {
         $baseUrl = rtrim(config('services.sgp.url'), '/');
-        $loginUrl = $baseUrl . '/accounts/login/?next=' . $nextPath;
+        $loginUrl = $baseUrl.'/accounts/login/?next='.$nextPath;
 
         $loginPage = Http::timeout(config('services.sgp.timeout', 15))
+            ->connectTimeout(config('services.sgp.connect_timeout', 5))
             ->withOptions(['cookies' => $cookies])
             ->get($loginUrl);
 
         if ($loginPage->failed()) {
-            throw new \RuntimeException('NÃ£o foi possÃ­vel abrir a tela de login do SGP.');
+            throw new \RuntimeException('Não foi possível abrir a tela de login do SGP.');
         }
 
         $csrf = $this->extrairCampoHtml($loginPage->body(), 'csrfmiddlewaretoken');
 
         if (! $csrf) {
-            throw new \RuntimeException('CSRF do login do SGP nÃ£o encontrado.');
+            throw new \RuntimeException('CSRF do login do SGP não encontrado.');
         }
 
         $response = Http::timeout(config('services.sgp.timeout', 15))
+            ->connectTimeout(config('services.sgp.connect_timeout', 5))
             ->withOptions([
                 'cookies' => $cookies,
                 'allow_redirects' => false,
@@ -384,11 +403,12 @@ class SgpService
     private function carregarPaginaWeb(CookieJar $cookies, string $path): string
     {
         $response = Http::timeout(config('services.sgp.timeout', 15))
+            ->connectTimeout(config('services.sgp.connect_timeout', 5))
             ->withOptions(['cookies' => $cookies])
             ->get($this->montarUrlSgp($path));
 
         if ($response->failed()) {
-            throw new \RuntimeException('Falha ao carregar pÃ¡gina do SGP: ' . $path);
+            throw new \RuntimeException('Falha ao carregar página do SGP: '.$path);
         }
 
         return $response->body();
@@ -399,6 +419,7 @@ class SgpService
         $url = $this->montarUrlSgp($path);
 
         return Http::timeout(config('services.sgp.timeout', 15))
+            ->connectTimeout(config('services.sgp.connect_timeout', 5))
             ->withOptions([
                 'cookies' => $cookies,
                 'allow_redirects' => false,
@@ -413,7 +434,7 @@ class SgpService
 
     private function montarUrlSgp(string $path): string
     {
-        return rtrim(config('services.sgp.url'), '/') . '/' . ltrim($path, '/');
+        return rtrim(config('services.sgp.url'), '/').'/'.ltrim($path, '/');
     }
 
     private function normalizarCaminhoSgp(string $path): string
@@ -442,7 +463,7 @@ class SgpService
 
     private function extrairCampoHtml(string $html, string $name): ?string
     {
-        $dom = new \DOMDocument();
+        $dom = new \DOMDocument;
         @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
         $xpath = new \DOMXPath($dom);
 
@@ -464,6 +485,7 @@ class SgpService
                     foreach ($node->childNodes as $option) {
                         if ($option->nodeName === 'option' && $option->hasAttribute('selected')) {
                             $value = trim($option->getAttribute('value'));
+
                             return $value !== '' ? $value : null;
                         }
                     }
@@ -472,6 +494,7 @@ class SgpService
                 }
 
                 $value = trim($node->getAttribute('value'));
+
                 return $value !== '' ? $value : null;
             }
         }
@@ -481,7 +504,7 @@ class SgpService
 
     private function resolverOpcaoPorTexto(string $html, string $name, string $texto, ?string $fallback = null): ?string
     {
-        $dom = new \DOMDocument();
+        $dom = new \DOMDocument;
         @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
         $xpath = new \DOMXPath($dom);
         $nodes = $xpath->query("//select[@name='{$name}']/option");
@@ -497,6 +520,7 @@ class SgpService
 
             if ($label !== '' && (str_contains($label, $procurado) || $label === $procurado)) {
                 $value = trim($option->getAttribute('value'));
+
                 return $value !== '' ? $value : $fallback;
             }
         }
@@ -554,7 +578,7 @@ class SgpService
         $candidatos = array_values(array_filter(array_unique([
             $usuarioResponsavel,
             config('services.sgp.web_username'),
-            'gabrieldias',
+            config('services.sgp.default_responsavel'),
         ])));
 
         foreach ($candidatos as $texto) {
@@ -578,12 +602,17 @@ class SgpService
             return null;
         }
 
-        return match (true) {
-            str_contains($nomeTecnico, 'jhon') => 'Jonh cleiton soares cavalcante',
-            str_contains($nomeTecnico, 'vanderley') => 'Vanderley',
-            str_contains($nomeTecnico, 'teste') => 'Pablo Oliveira Bomfim',
-            default => null,
-        };
+        $mapa = array_filter(config('services.sgp.tecnico_responsavel_map', []));
+
+        foreach ($mapa as $matcher => $responsavel) {
+            $matcher = mb_strtolower(trim((string) $matcher));
+
+            if ($matcher !== '' && str_contains($nomeTecnico, $matcher)) {
+                return trim((string) $responsavel) ?: null;
+            }
+        }
+
+        return null;
     }
 
     private function resolverTecnicoResponsavelSgp(OrdemServico $ordem, string $html): ?string

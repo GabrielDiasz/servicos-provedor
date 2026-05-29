@@ -1,14 +1,19 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-100">Técnicos</h2>
+    <div class="py-6 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#0c5f3a] dark:text-emerald-400">Cadastro</p>
+                <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">Técnicos</h1>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Organize a equipe, grupos e carga de trabalho em uma tabela limpa e rápida de ler.
+                </p>
+            </div>
+
             <a href="{{ route('tecnicos.create') }}" class="app-btn-primary">
                 + Novo Técnico
             </a>
         </div>
-    </x-slot>
 
-    <div class="py-6 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="app-surface overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                 <thead class="bg-[#f5fbf4] dark:bg-slate-800">
@@ -71,3 +76,7 @@
         <div class="mt-4">{{ $tecnicos->links() }}</div>
     </div>
 </x-app-layout>
+
+
+
+

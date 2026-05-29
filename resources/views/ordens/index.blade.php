@@ -1,24 +1,28 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-[#064b31] dark:text-slate-100">Ordens de Serviço</h2>
-            <a href="{{ route('ordens.create') }}"
-               class="px-4 py-2 bg-[#ff7a00] text-white rounded-lg hover:bg-[#e96f00] text-sm font-medium shadow-sm dark:shadow-none">
-                + Nova OS
-            </a>
-        </div>
-    </x-slot>
-
     <div
         x-data="{ deleteModalOpen: false, deleteAction: '', deleteLabel: '' }"
         class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
     >
+        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff5a00]">Operação</p>
+                <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Ordens de Serviço</h1>
+                <p class="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+                    Centralize o acompanhamento das OS, atualize técnico e status sem abrir novas telas.
+                </p>
+            </div>
+
+            <a href="{{ route('ordens.create') }}"
+               class="inline-flex h-9 items-center justify-center rounded-md bg-[#ff5a00] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e45200] focus:outline-none focus:ring-2 focus:ring-[#ff5a00] focus:ring-offset-2 dark:focus:ring-offset-[#2b2b2b]">
+                + Nova OS
+            </a>
+        </div>
 
         {{-- Filtros --}}
         <form method="GET" action="{{ route('ordens.index') }}"
-              class="bg-white rounded-xl shadow-sm border border-[#d7e6d9] p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+              class="app-surface mb-5 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
 
-            <select name="status" class="border rounded-lg px-3 py-2 text-sm">
+            <select name="status" class="app-select">
                 <option value="">Todos os status</option>
                 @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
                     <option value="{{ $key }}" {{ request('status') == $key ? 'selected' : '' }}>
@@ -27,7 +31,7 @@
                 @endforeach
             </select>
 
-            <select name="tecnico_id" class="border rounded-lg px-3 py-2 text-sm">
+            <select name="tecnico_id" class="app-select">
                 <option value="">Todos os técnicos</option>
                 @foreach($tecnicos as $tecnico)
                     <option value="{{ $tecnico->id }}" {{ request('tecnico_id') == $tecnico->id ? 'selected' : '' }}>
@@ -36,7 +40,7 @@
                 @endforeach
             </select>
 
-            <select name="tipo_servico" class="border rounded-lg px-3 py-2 text-sm">
+            <select name="tipo_servico" class="app-select">
                 <option value="">Todos os tipos</option>
                 @foreach(\App\Models\OrdemServico::TIPOS as $key => $label)
                     <option value="{{ $key }}" {{ request('tipo_servico') == $key ? 'selected' : '' }}>
@@ -45,25 +49,34 @@
                 @endforeach
             </select>
 
+            <select name="prioridade" class="app-select">
+                <option value="">Todas prioridades</option>
+                @foreach(\App\Models\OrdemServico::PRIORIDADES as $key => $label)
+                    <option value="{{ $key }}" {{ request('prioridade') == $key ? 'selected' : '' }}>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+
             <input type="date" name="data_marcacao" value="{{ $dataMarcacao }}"
-                   class="border rounded-lg px-3 py-2 text-sm">
+                   class="app-field">
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-[#064b31] text-white rounded-lg px-3 py-2 text-sm hover:bg-[#0c5f3a]">
+                        class="app-btn-primary flex-1">
                     Filtrar
                 </button>
                 <a href="{{ route('ordens.index') }}"
-                   class="flex-1 text-center bg-[#fff3e6] text-[#b65300] rounded-lg px-3 py-2 text-sm hover:bg-[#ffe3c2]">
+                   class="app-btn-secondary flex-1">
                     Limpar
                 </a>
             </div>
         </form>
 
         {{-- Tabela --}}
-        <div class="bg-white rounded-xl shadow-sm border border-[#d7e6d9] overflow-x-auto">
+        <div class="overflow-x-auto rounded-lg border border-[#d7e6d9] bg-white shadow-sm dark:border-[#4a4a4a] dark:bg-[#333333] dark:shadow-none">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-[#f5fbf4]">
+                <thead class="bg-[#f5fbf4] dark:bg-[#272727]">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
@@ -131,7 +144,7 @@
                                 <span class="text-xs text-gray-500">{{ $ordem->cliente_telefone }}</span>
                             </td>
                             <td class="px-4 py-3">
-                                {{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico }}
+                                {{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico ?? '-' }}
                             </td>
                             <td class="px-4 py-4 text-gray-600 align-top">{{ $ordem->bairro }}</td>
                             <td class="px-4 py-3">
@@ -162,15 +175,15 @@
                                     ];
                                 @endphp
                                 <span class="mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold tracking-wide {{ $turnoCores[$ordem->turno] ?? 'bg-gray-100 text-gray-700 border-gray-200' }}">
-                                    {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] }}
+                                    {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? $ordem->turno ?? '-' }}
                                 </span>
                             </td>
                             <td class="px-4 py-4 align-top">
                                 @php
                                     $cores = ['normal' => 'bg-gray-100 text-gray-700', 'alta' => 'bg-yellow-100 text-yellow-700', 'urgente' => 'bg-red-100 text-red-700'];
                                 @endphp
-                                <span class="px-2 py-1 rounded-full text-xs font-medium {{ $cores[$ordem->prioridade] }}">
-                                    {{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] }}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium {{ $cores[$ordem->prioridade] ?? 'bg-slate-100 text-slate-700' }}">
+                                    {{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? $ordem->prioridade ?? '-' }}
                                 </span>
                             </td>
                             <td class="px-4 py-4 align-top">
@@ -214,7 +227,7 @@
                                     </a>
 
                                     <button type="button"
-                                            title="Excluir ordem de serviÃ§o"
+                                            title="Excluir ordem de serviço"
                                             x-on:click="deleteModalOpen = true; deleteAction = @js(route('ordens.destroy', $ordem)); deleteLabel = @js('OS #' . $ordem->id . ' - ' . $ordem->cliente_nome)"
                                             class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-900/60 dark:bg-slate-900 dark:hover:bg-red-950/30">
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -275,3 +288,4 @@
         </div>
     </div>
 </x-app-layout>
+

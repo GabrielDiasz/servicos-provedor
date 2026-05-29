@@ -46,29 +46,37 @@ class OrdemServico extends Model
 
     // Labels para exibição na tela
     public const TIPOS = [
-        'instalacao'       => 'Instalação',
-        'reparo'           => 'Reparo',
-        'upgrade'          => 'Upgrade',
-        'reativacao'       => 'Reativação',
-        'desconectado'     => 'Desconectado',
-        'troca_senha'      => 'Troca de Senha',
+        'instalacao' => 'Instalação',
+        'reparo' => 'Reparo',
+        'upgrade' => 'Upgrade',
+        'reativacao' => 'Reativação',
+        'desconectado' => 'Desconectado',
+        'troca_senha' => 'Troca de Senha',
         'mudanca_endereco' => 'Mudança de Endereço',
-        'cancelamento'     => 'Cancelamento',
+        'cancelamento' => 'Cancelamento',
     ];
 
     public const STATUS = [
-        'pendente'        => 'Pendente',
-        'passada'         => 'Passada',
-        'concluida'       => 'Concluída',
-        'cancelada'       => 'Cancelada',
-        'retornar'        => 'Retornar',
-        'sem_contato'     => 'Sem Contato',
+        'pendente' => 'Pendente',
+        'passada' => 'Passada',
+        'concluida' => 'Concluída',
+        'cancelada' => 'Cancelada',
+        'retornar' => 'Retornar',
+        'sem_contato' => 'Sem Contato',
         'sem_viabilidade' => 'Sem Viabilidade',
     ];
 
+    public const STATUS_ABERTOS = [
+        'pendente',
+        'passada',
+        'retornar',
+        'sem_contato',
+        'sem_viabilidade',
+    ];
+
     public const PRIORIDADES = [
-        'normal'  => 'Normal',
-        'alta'    => 'Alta',
+        'normal' => 'Normal',
+        'alta' => 'Alta',
         'urgente' => 'Urgente',
     ];
 

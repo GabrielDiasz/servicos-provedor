@@ -9,7 +9,11 @@ class WhatsAppGrupoController extends Controller
 {
     public function index()
     {
-        $grupos = WhatsAppGrupo::orderBy('nome')->paginate(20);
+        $grupos = WhatsAppGrupo::query()
+            ->withCount('tecnicos')
+            ->orderByDesc('ativo')
+            ->orderBy('nome')
+            ->paginate(20);
 
         return view('whatsapp-grupos.index', compact('grupos'));
     }
@@ -61,7 +65,7 @@ class WhatsAppGrupoController extends Controller
 
         return $request->validate([
             'nome' => 'required|string|max:255',
-            'grupo_id' => 'required|string|max:255|ends_with:@g.us|unique:whatsapp_grupos,grupo_id,' . $id,
+            'grupo_id' => 'required|string|max:255|ends_with:@g.us|unique:whatsapp_grupos,grupo_id,'.$id,
         ]);
     }
 }
