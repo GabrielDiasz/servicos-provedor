@@ -23,7 +23,7 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Link do cliente no SGP</label>
                     <div class="flex gap-2">
                         <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link') }}"
-                               placeholder="https://seu-sgp.exemplo/admin/cliente/3176/edit/"
+                               placeholder="Cole o link da página de cadastro do cliente no SGP"
                                class="app-field flex-1">
                         <button type="button" id="buscar-sgp"
                                 class="app-btn-secondary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-60">
