@@ -3,7 +3,7 @@
         <h2 class="text-xl font-semibold text-gray-800 dark:text-slate-100">Nova Ordem de Serviço</h2>
     </x-slot>
 
-    <div class="py-6 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="py-4 max-w-4xl mx-auto px-4 sm:px-6 lg:px-10">
         <div class="app-surface p-6">
 
             @if($errors->any())
@@ -16,7 +16,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('ordens.store') }}" class="space-y-5" x-on:submit="$dispatch('busy-start', { label: 'Salvando OS...' })">
+            <form method="POST" action="{{ route('ordens.store') }}" class="space-y-2" x-on:submit="$dispatch('busy-start', { label: 'Salvando OS...' })">
                 @csrf
 
                 <div>
@@ -70,7 +70,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Turno *</label>
                         <select name="turno"
@@ -96,25 +96,26 @@
                             @endforeach
                         </select>
                     </div>
+
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data de Marcação *</label>
                         <input type="date" name="data_marcacao" value="{{ old('data_marcacao') }}"
                                class="app-field w-full"
                                required>
                     </div>
-                </div>
 
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
-                    <select name="tecnico_id"
-                            class="app-select w-full">
-                        <option value="">Sem técnico</option>
-                        @foreach($tecnicos as $tecnico)
-                            <option value="{{ $tecnico->id }}" {{ old('tecnico_id') == $tecnico->id ? 'selected' : '' }}>
-                                {{ $tecnico->nome }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
+                        <select name="tecnico_id"
+                                class="app-select w-full">
+                            <option value="">Sem técnico</option>
+                            @foreach($tecnicos as $tecnico)
+                                <option value="{{ $tecnico->id }}" {{ old('tecnico_id') == $tecnico->id ? 'selected' : '' }}>
+                                    {{ $tecnico->nome }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
 
                 <div>
