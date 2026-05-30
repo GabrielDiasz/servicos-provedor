@@ -1,6 +1,6 @@
-<x-app-layout>
+﻿<x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Editar Usuário</h2>
+        <h2 class="text-xl font-semibold text-gray-800">Editar UsuÃ¡rio</h2>
     </x-slot>
 
     <div class="py-6 max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,12 +36,14 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Perfil *</label>
-                    <select name="perfil"
-                            class="app-select w-full"
-                            required>
-                        <option value="atendente" {{ old('perfil', $usuario->perfil) == 'atendente' ? 'selected' : '' }}>Atendente</option>
-                        <option value="admin" {{ old('perfil', $usuario->perfil) == 'admin' ? 'selected' : '' }}>Admin</option>
-                    </select>
+                        <x-sgp-select
+                            name="perfil"
+                            :options="['atendente' => 'Atendente', 'admin' => 'Admin']"
+                            :selected="$usuario->perfil"
+                            placeholder="Selecione o perfil"
+                            class="w-full"
+                            required
+                        />
                 </div>
 
                 <div class="border-t pt-4">
@@ -74,3 +76,4 @@
         </div>
     </div>
 </x-app-layout>
+

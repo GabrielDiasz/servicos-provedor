@@ -16,7 +16,7 @@ class DashboardController extends Controller
         $agora = now();
         $selectedMonth = max(1, min(12, (int) $request->integer('month', $agora->month)));
         $selectedYear = max(2020, min(2100, (int) $request->integer('year', $agora->year)));
-        $cacheKey = sprintf('dashboard:summary:%04d-%02d', $selectedYear, $selectedMonth);
+        $cacheKey = sprintf('dashboard:summary:v2:%04d-%02d', $selectedYear, $selectedMonth);
 
         $data = Cache::remember($cacheKey, 60, function () use ($selectedMonth, $selectedYear, $agora) {
             $inicioMes = $agora->copy()->setYear($selectedYear)->setMonth($selectedMonth)->startOfMonth();
@@ -71,7 +71,8 @@ class DashboardController extends Controller
                 ->reject(function (array $tecnico) {
                     return Str::contains(Str::lower($tecnico['nome']), 'teste');
                 })
-                ->values();
+                ->values()
+                ->all();
 
             $servicosConcluidosPorTipo = OrdemServico::query()
                 ->select('tipo_servico', DB::raw('COUNT(*) as total'))
@@ -89,14 +90,15 @@ class DashboardController extends Controller
                     ];
                 })
                 ->sortByDesc('total')
-                ->values();
+                ->values()
+                ->all();
 
-            $maiorQuantidadeTecnico = max($tecnicosDesempenho->pluck('servicos_mes')->max() ?? 0, 1);
-            $maiorQuantidadeTipoConcluido = max($tiposServico->pluck('total')->max() ?? 0, 1);
-            $tecnicosLabels = $tecnicosDesempenho->map(fn (array $tecnico) => $tecnico['nome'])->values();
-            $tecnicosValores = $tecnicosDesempenho->map(fn (array $tecnico) => $tecnico['servicos_mes'])->values();
-            $tiposLabels = $tiposServico->map(fn (array $tipo) => $tipo['label'])->values();
-            $tiposValores = $tiposServico->map(fn (array $tipo) => $tipo['total'])->values();
+            $maiorQuantidadeTecnico = max(collect($tecnicosDesempenho)->pluck('servicos_mes')->max() ?? 0, 1);
+            $maiorQuantidadeTipoConcluido = max(collect($tiposServico)->pluck('total')->max() ?? 0, 1);
+            $tecnicosLabels = collect($tecnicosDesempenho)->map(fn (array $tecnico) => $tecnico['nome'])->values()->all();
+            $tecnicosValores = collect($tecnicosDesempenho)->map(fn (array $tecnico) => $tecnico['servicos_mes'])->values()->all();
+            $tiposLabels = collect($tiposServico)->map(fn (array $tipo) => $tipo['label'])->values()->all();
+            $tiposValores = collect($tiposServico)->map(fn (array $tipo) => $tipo['total'])->values()->all();
 
             $comparativo = function (int $atual, int $anterior): array {
                 $delta = $atual - $anterior;
@@ -134,6 +136,7 @@ class DashboardController extends Controller
         });
 
         $data['tecnicos'] = collect($data['tecnicos']);
+        $data['tecnicosDesempenho'] = collect($data['tecnicosDesempenho']);
         $data['tiposServico'] = collect($data['tiposServico']);
 
         $inicioHoje = $agora->copy()->startOfDay();

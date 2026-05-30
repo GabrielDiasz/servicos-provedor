@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-slate-100">Editar OS #{{ $ordem->id }}</h2>
     </x-slot>
@@ -24,7 +24,7 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Link do cliente no SGP</label>
                     <div class="flex gap-2">
                         <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link', $ordem->sgp_cliente_link) }}"
-                               placeholder="Cole o link da página de cadastro do cliente no SGP"
+                               placeholder="Cole o link da pÃ¡gina de cadastro do cliente no SGP"
                                class="app-field flex-1">
                         <button type="button" id="buscar-sgp"
                                 class="app-btn-secondary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-60">
@@ -55,48 +55,58 @@
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Tipo de Serviço *</label>
-                        <select name="tipo_servico" class="app-select w-full" required>
-                            @foreach(\App\Models\OrdemServico::TIPOS as $key => $label)
-                                <option value="{{ $key }}" {{ old('tipo_servico', $ordem->tipo_servico) == $key ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <x-sgp-select
+                                name="tipo_servico"
+                                :options="\App\Models\OrdemServico::TIPOS"
+                                :selected="$ordem->tipo_servico"
+                                placeholder="Selecione..."
+                                class="w-full"
+                                required
+                            />
                     </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Turno *</label>
-                        <select name="turno" class="app-select w-full" required>
-                            @foreach(\App\Models\OrdemServico::TURNOS as $key => $label)
-                                <option value="{{ $key }}" {{ old('turno', $ordem->turno) == $key ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <x-sgp-select
+                                name="turno"
+                                :options="\App\Models\OrdemServico::TURNOS"
+                                :selected="$ordem->turno"
+                                placeholder="Selecione..."
+                                class="w-full"
+                                required
+                            />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Prioridade *</label>
-                        <select name="prioridade" class="app-select w-full" required>
-                            @foreach(\App\Models\OrdemServico::PRIORIDADES as $key => $label)
-                                <option value="{{ $key }}" {{ old('prioridade', $ordem->prioridade) == $key ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <x-sgp-select
+                                name="prioridade"
+                                :options="\App\Models\OrdemServico::PRIORIDADES"
+                                :selected="$ordem->prioridade"
+                                placeholder="Selecione..."
+                                class="w-full"
+                                required
+                            />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Status *</label>
-                        <select name="status" class="app-select w-full" required>
-                            @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
-                                @continue($key === 'passada' && $ordem->status !== 'passada')
-                                <option value="{{ $key }}" {{ old('status', $ordem->status) == $key ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        @php
+                            $statusOptions = \App\Models\OrdemServico::STATUS;
+
+                            if ($ordem->status !== 'passada') {
+                                unset($statusOptions['passada']);
+                            }
+                        @endphp
+                        <x-sgp-select
+                            name="status"
+                            :options="$statusOptions"
+                            :selected="$ordem->status"
+                            placeholder="Selecione..."
+                            class="w-full"
+                            required
+                        />
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data *</label>
@@ -107,14 +117,13 @@
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
-                        <select name="tecnico_id" class="app-select w-full">
-                            <option value="">Sem técnico</option>
-                            @foreach($tecnicos as $tecnico)
-                                <option value="{{ $tecnico->id }}" {{ old('tecnico_id', $ordem->tecnico_id) == $tecnico->id ? 'selected' : '' }}>
-                                    {{ $tecnico->nome }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <x-sgp-select
+                            name="tecnico_id"
+                            :options="$tecnicos->mapWithKeys(fn ($tecnico) => [$tecnico->id => $tecnico->nome])->all()"
+                            :selected="$ordem->tecnico_id"
+                            placeholder="Sem técnico"
+                            class="w-full"
+                        />
                     </div>
                 </div>
 
@@ -122,7 +131,7 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Observação</label>
                     <textarea name="observacao" rows="3"
                               class="app-field w-full">{{ old('observacao', $ordem->observacao) }}</textarea>
-                    <p class="mt-1 text-xs text-gray-400 dark:text-slate-400">Obrigatória para Upgrade.</p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-slate-400">Obrigatório para Upgrade.</p>
                 </div>
 
                 <div class="flex gap-3 pt-2">
@@ -170,7 +179,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Cliente não encontrado no SGP.');
+                    throw new Error(data.message || 'Cliente nÃ£o encontrado no SGP.');
                 }
 
                 document.getElementById('cliente_nome').value = data.cliente_nome || '';
@@ -189,3 +198,6 @@
         });
     </script>
 </x-app-layout>
+
+
+

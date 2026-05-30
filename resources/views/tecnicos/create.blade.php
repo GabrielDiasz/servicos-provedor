@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold text-gray-800">Novo Técnico</h2>
     </x-slot>
@@ -32,22 +32,20 @@
                            placeholder="Ex: 5573999990000"
                            class="app-field w-full"
                            required>
-                    <p class="text-xs text-gray-400 mt-1">Formato: código do país + DDD + número (sem espaços ou traços)</p>
+                    <p class="text-xs text-gray-400 mt-1">Formato: cÃ³digo do paÃ­s + DDD + nÃºmero (sem espaÃ§os ou traÃ§os)</p>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Grupo de envio *</label>
-                    <select name="whatsapp_grupo_id"
-                            class="app-select w-full"
-                            required>
-                        <option value="">Selecione um grupo</option>
-                        @foreach($whatsappGrupos as $grupo)
-                            <option value="{{ $grupo->id }}" {{ old('whatsapp_grupo_id') == $grupo->id ? 'selected' : '' }}>
-                                {{ $grupo->nome }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-gray-400 mt-1">As ordens deste técnico serão enviadas para esse grupo.</p>
+                    <x-sgp-select
+                            name="whatsapp_grupo_id"
+                            :options="$whatsappGrupos->mapWithKeys(fn ($grupo) => [$grupo->id => $grupo->nome])->all()"
+                            :selected="old('whatsapp_grupo_id')"
+                            placeholder="Selecione um grupo"
+                            class="w-full"
+                            required
+                        />
+                    <p class="text-xs text-gray-400 mt-1">As ordens deste Técnico serÃ£o enviadas para esse grupo.</p>
                 </div>
 
                 <div class="flex gap-3 pt-2">
@@ -64,3 +62,4 @@
         </div>
     </div>
 </x-app-layout>
+

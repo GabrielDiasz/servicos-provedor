@@ -15,6 +15,7 @@
     };
 
     $deltaConclusao = $formatarDelta($metricasConclusao);
+    $yearSelectOptions = collect($yearOptions)->mapWithKeys(fn ($year) => [$year => $year])->all();
 @endphp
 
 <x-app-layout>
@@ -35,26 +36,28 @@
                             <label for="month" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                                 Mês
                             </label>
-                            <select id="month" name="month" class="app-select w-full">
-                                @foreach($monthOptions as $value => $label)
-                                    <option value="{{ $value }}" {{ (int) $selectedMonth === (int) $value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <x-sgp-select
+                                id="month"
+                                name="month"
+                                :options="$monthOptions"
+                                :selected="$selectedMonth"
+                                placeholder="Selecione o mês"
+                                class="w-full"
+                            />
                         </div>
 
                         <div>
                             <label for="year" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                                 Ano
                             </label>
-                            <select id="year" name="year" class="app-select w-full">
-                                @foreach($yearOptions as $year)
-                                    <option value="{{ $year }}" {{ (int) $selectedYear === (int) $year ? 'selected' : '' }}>
-                                        {{ $year }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <x-sgp-select
+                                id="year"
+                                name="year"
+                                :options="$yearSelectOptions"
+                                :selected="$selectedYear"
+                                placeholder="Selecione o ano"
+                                class="w-full"
+                            />
                         </div>
 
                         <button type="submit" class="app-btn-primary h-11 px-6 sm:ml-1">
