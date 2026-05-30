@@ -14,6 +14,17 @@ class OrdemServicoController extends Controller
 {
     public function index(Request $request)
     {
+        $dataMarcacao = $request->filled('data_marcacao')
+            ? $request->data_marcacao
+            : now()->toDateString();
+
+        $resumoDia = OrdemServico::query()
+            ->where('data_marcacao', $dataMarcacao)
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'passada' THEN 1 ELSE 0 END) as total_passadas")
+            ->selectRaw("SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as total_concluidas")
+            ->first();
+
         $query = OrdemServico::query()
             ->select([
                 'id',
@@ -44,10 +55,6 @@ class OrdemServicoController extends Controller
             $query->where('tipo_servico', $request->tipo_servico);
         }
 
-        $dataMarcacao = $request->filled('data_marcacao')
-            ? $request->data_marcacao
-            : now()->toDateString();
-
         $query->where('data_marcacao', $dataMarcacao);
 
         if ($request->filled('prioridade')) {
@@ -64,7 +71,7 @@ class OrdemServicoController extends Controller
         $tecnicos = $this->tecnicosAtivosOrdenados();
         $tecnicosDisponiveis = $this->tecnicosDisponiveisOrdenados();
 
-        return view('ordens.index', compact('ordens', 'tecnicos', 'tecnicosDisponiveis', 'dataMarcacao'));
+        return view('ordens.index', compact('ordens', 'tecnicos', 'tecnicosDisponiveis', 'dataMarcacao', 'resumoDia'));
     }
 
     public function create()
