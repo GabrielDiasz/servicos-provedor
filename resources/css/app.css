@@ -4,6 +4,150 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    .app-surface {
+        @apply rounded-lg border border-slate-200 bg-white shadow-sm dark:border-[#4a4a4a] dark:bg-[#333333] dark:shadow-none;
+    }
+
+    .app-field {
+        @apply rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#ff5a00] focus:ring-[#ff5a00] dark:border-[#555555] dark:bg-[#333333] dark:text-slate-100 dark:placeholder:text-slate-400;
+    }
+
+    .app-select {
+        @apply appearance-none rounded-lg border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm font-semibold text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/20 dark:border-[#555555] dark:bg-[#333333] dark:text-slate-100 dark:placeholder:text-slate-400;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.85rem center;
+        background-size: 1rem 1rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(15, 23, 42, 0.12);
+        color-scheme: dark;
+        min-height: 42px;
+        cursor: pointer;
+    }
+
+    .app-select-inline {
+        @apply min-h-0 rounded-full px-3.5 py-1.5 pr-9 text-xs leading-tight;
+        background-position: right 0.7rem center;
+        background-size: 0.85rem 0.85rem;
+    }
+
+    .app-select:hover {
+        @apply border-[#ff7a00]/70 bg-slate-50 dark:border-[#ff7a00]/60 dark:bg-[#383838];
+    }
+
+    .app-select:focus {
+        @apply outline-none;
+    }
+
+    html.dark .app-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23cbd5e1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-color: #303030;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.28);
+    }
+
+    select option,
+    .app-select option {
+        background-color: #ffffff;
+        color: #111827;
+        font-weight: 600;
+        padding: 0.65rem 0.8rem;
+    }
+
+    select option:checked,
+    .app-select option:checked {
+        background: #ff7a00 linear-gradient(0deg, #ff7a00 0%, #ff7a00 100%);
+        color: #ffffff;
+    }
+
+    html.dark select option,
+    html.dark .app-select option {
+        background-color: #2f2f2f;
+        color: #f8fafc;
+    }
+
+    html.dark select option:checked,
+    html.dark .app-select option:checked {
+        background: #ff7a00 linear-gradient(0deg, #ff7a00 0%, #ff7a00 100%);
+        color: #ffffff;
+    }
+
+    .app-btn {
+        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2;
+    }
+
+    .app-btn-primary {
+        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#ff5a00] text-white hover:bg-[#e45200] focus:ring-[#ff5a00] dark:focus:ring-offset-[#2b2b2b];
+    }
+
+    .app-btn-secondary {
+        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus:ring-[#ff5a00] dark:border-[#555555] dark:bg-[#3a3a3a] dark:text-slate-100 dark:hover:bg-[#444444] dark:focus:ring-offset-[#2b2b2b];
+    }
+
+    .app-btn-danger {
+        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:focus:ring-offset-[#2b2b2b];
+    }
+
+    .gpr-datepicker {
+        @apply rounded-xl border border-slate-700 bg-[#2f2f2f] text-slate-100 shadow-2xl;
+    }
+
+    .gpr-datepicker .flatpickr-months {
+        @apply rounded-t-xl bg-[#2f2f2f] px-2 pt-2;
+    }
+
+    .gpr-datepicker .flatpickr-current-month,
+    .gpr-datepicker .flatpickr-monthDropdown-months,
+    .gpr-datepicker .flatpickr-weekday,
+    .gpr-datepicker .flatpickr-months .flatpickr-month {
+        @apply text-slate-100;
+    }
+
+    .gpr-datepicker .flatpickr-monthDropdown-months,
+    .gpr-datepicker .flatpickr-months .flatpickr-month {
+        background: transparent;
+    }
+
+    .gpr-datepicker .flatpickr-weekdays {
+        @apply border-t border-b border-slate-700 bg-[#292929];
+    }
+
+    .gpr-datepicker .flatpickr-day {
+        @apply rounded-lg border-transparent text-slate-100 transition;
+    }
+
+    .gpr-datepicker .flatpickr-day:hover,
+    .gpr-datepicker .flatpickr-day:focus {
+        @apply border-[#ff7a00]/40 bg-[#ff7a00]/15 text-white;
+    }
+
+    .gpr-datepicker .flatpickr-day.today {
+        @apply border-[#ff7a00]/60 text-[#ffb366];
+    }
+
+    .gpr-datepicker .flatpickr-day.selected,
+    .gpr-datepicker .flatpickr-day.startRange,
+    .gpr-datepicker .flatpickr-day.endRange {
+        @apply border-[#ff7a00] bg-[#ff7a00] text-white;
+    }
+
+    .gpr-datepicker .flatpickr-day.prevMonthDay,
+    .gpr-datepicker .flatpickr-day.nextMonthDay {
+        @apply text-slate-500;
+    }
+
+    .gpr-datepicker .flatpickr-time {
+        @apply border-t border-slate-700 bg-[#2f2f2f];
+    }
+
+    .gpr-datepicker-input {
+        @apply w-full;
+    }
+
+    .animate-toast-progress {
+        animation: toast-progress 4.2s linear forwards;
+    }
+}
+
 @layer base {
     @keyframes toast-progress {
         from {
@@ -113,113 +257,5 @@
     html.dark ::selection {
         background: #ff5a00;
         color: #ffffff;
-    }
-}
-
-@layer components {
-    .app-surface {
-        @apply rounded-lg border border-slate-200 bg-white shadow-sm dark:border-[#4a4a4a] dark:bg-[#333333] dark:shadow-none;
-    }
-
-    .app-field {
-        @apply rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#ff5a00] focus:ring-[#ff5a00] dark:border-[#555555] dark:bg-[#333333] dark:text-slate-100 dark:placeholder:text-slate-400;
-    }
-
-    .app-select {
-        @apply appearance-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-11 text-sm font-medium text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/20 dark:border-[#555555] dark:bg-[#333333] dark:text-slate-100 dark:placeholder:text-slate-400;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 0.95rem center;
-        background-size: 1rem 1rem;
-        min-height: 46px;
-        cursor: pointer;
-    }
-
-    .app-select:hover {
-        @apply border-slate-400 dark:border-[#707070];
-    }
-
-    .app-select:focus {
-        @apply outline-none;
-    }
-
-    html.dark .app-select {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23cbd5e1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    }
-
-    .app-btn {
-        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2;
-    }
-
-    .app-btn-primary {
-        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#ff5a00] text-white hover:bg-[#e45200] focus:ring-[#ff5a00] dark:focus:ring-offset-[#2b2b2b];
-    }
-
-    .app-btn-secondary {
-        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus:ring-[#ff5a00] dark:border-[#555555] dark:bg-[#3a3a3a] dark:text-slate-100 dark:hover:bg-[#444444] dark:focus:ring-offset-[#2b2b2b];
-    }
-
-    .app-btn-danger {
-        @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:focus:ring-offset-[#2b2b2b];
-    }
-
-    .gpr-datepicker {
-        @apply rounded-xl border border-slate-700 bg-[#2f2f2f] text-slate-100 shadow-2xl;
-    }
-
-    .gpr-datepicker .flatpickr-months {
-        @apply rounded-t-xl bg-[#2f2f2f] px-2 pt-2;
-    }
-
-    .gpr-datepicker .flatpickr-current-month,
-    .gpr-datepicker .flatpickr-monthDropdown-months,
-    .gpr-datepicker .flatpickr-weekday,
-    .gpr-datepicker .flatpickr-months .flatpickr-month {
-        @apply text-slate-100;
-    }
-
-    .gpr-datepicker .flatpickr-monthDropdown-months,
-    .gpr-datepicker .flatpickr-months .flatpickr-month {
-        background: transparent;
-    }
-
-    .gpr-datepicker .flatpickr-weekdays {
-        @apply border-t border-b border-slate-700 bg-[#292929];
-    }
-
-    .gpr-datepicker .flatpickr-day {
-        @apply rounded-lg border-transparent text-slate-100 transition;
-    }
-
-    .gpr-datepicker .flatpickr-day:hover,
-    .gpr-datepicker .flatpickr-day:focus {
-        @apply border-[#ff7a00]/40 bg-[#ff7a00]/15 text-white;
-    }
-
-    .gpr-datepicker .flatpickr-day.today {
-        @apply border-[#ff7a00]/60 text-[#ffb366];
-    }
-
-    .gpr-datepicker .flatpickr-day.selected,
-    .gpr-datepicker .flatpickr-day.startRange,
-    .gpr-datepicker .flatpickr-day.endRange {
-        @apply border-[#ff7a00] bg-[#ff7a00] text-white;
-    }
-
-    .gpr-datepicker .flatpickr-day.prevMonthDay,
-    .gpr-datepicker .flatpickr-day.nextMonthDay {
-        @apply text-slate-500;
-    }
-
-    .gpr-datepicker .flatpickr-time {
-        @apply border-t border-slate-700 bg-[#2f2f2f];
-    }
-
-    .gpr-datepicker-input {
-        @apply w-full;
-    }
-
-    .animate-toast-progress {
-        animation: toast-progress 4.2s linear forwards;
     }
 }

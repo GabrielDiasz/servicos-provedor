@@ -29,8 +29,8 @@ dateInputs.forEach((input) => {
         disableMobile: true,
         locale: Portuguese,
         monthSelectorType: 'static',
-        prevArrow: '‹',
-        nextArrow: '›',
+        prevArrow: '<',
+        nextArrow: '>',
         onReady(_, __, instance) {
             instance.calendarContainer.classList.add('gpr-datepicker');
             instance.altInput?.classList.add('app-field', 'gpr-datepicker-input');

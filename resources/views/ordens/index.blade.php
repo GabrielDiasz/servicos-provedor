@@ -188,7 +188,7 @@
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200/90 dark:divide-slate-700/80">
                     @php
                         $rowStyles = [
                             'passada' => [
@@ -236,34 +236,39 @@
                                 'id' => 'text-gray-500',
                             ];
                         @endphp
-                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors {{ $rowStyle['class'] }}"
+                        <tr class="group hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors {{ $rowStyle['class'] }}"
                             style="{{ $rowStyle['accent'] }}">
-                            <td class="px-4 py-4 align-top {{ $rowStyle['id'] }}">{{ $ordem->id }}</td>
-                            <td class="px-4 py-3 font-medium text-gray-900">
-                                @if (filled($ordem->sgp_cliente_link))
-                                    <a href="{{ $ordem->sgp_cliente_link }}" target="_blank" rel="noopener noreferrer"
-                                        class="inline-flex items-center gap-1 text-gray-900 hover:text-gray-900 hover:underline dark:text-slate-100 dark:hover:text-slate-100">
+                            <td class="px-4 py-4 align-middle {{ $rowStyle['id'] }}">{{ $ordem->id }}</td>
+                            <td class="px-4 py-4 align-middle font-medium text-gray-900">
+                                <div class="flex flex-col gap-1 leading-tight">
+                                    @if (filled($ordem->sgp_cliente_link))
+                                        <a href="{{ $ordem->sgp_cliente_link }}" target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="inline-flex items-start gap-1 text-gray-900 transition hover:text-[#ff7a00] hover:underline dark:text-slate-100 dark:hover:text-[#ffb366]">
+                                            <span>{{ $ordem->cliente_nome }}</span>
+                                            <svg class="mt-0.5 h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20"
+                                                fill="currentColor" aria-hidden="true">
+                                                <path
+                                                    d="M11 3a1 1 0 1 0 0 2h2.586l-7.293 7.293a1 1 0 0 0 1.414 1.414L15 6.414V9a1 1 0 1 0 2 0V3h-6z" />
+                                                <path
+                                                    d="M5 5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a1 1 0 1 0-2 0v3H5V7h3a1 1 0 1 0 0-2H5z" />
+                                            </svg>
+                                        </a>
+                                    @else
                                         <span>{{ $ordem->cliente_nome }}</span>
-                                        <svg class="h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20" fill="currentColor"
-                                            aria-hidden="true">
-                                            <path
-                                                d="M11 3a1 1 0 1 0 0 2h2.586l-7.293 7.293a1 1 0 0 0 1.414 1.414L15 6.414V9a1 1 0 1 0 2 0V3h-6z" />
-                                            <path
-                                                d="M5 5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a1 1 0 1 0-2 0v3H5V7h3a1 1 0 1 0 0-2H5z" />
-                                        </svg>
-                                    </a>
-                                @else
-                                    <span>{{ $ordem->cliente_nome }}</span>
-                                @endif
-                                <br>
-                                <span class="text-xs text-gray-500">{{ $ordem->cliente_telefone }}</span>
+                                    @endif
+                                    <span class="text-xs font-normal text-gray-500 dark:text-slate-400">
+                                        {{ $ordem->cliente_telefone }}
+                                    </span>
+                                </div>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-4 align-middle">
                                 {{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? ($ordem->tipo_servico ?? '-') }}
                             </td>
-                            <td class="px-4 py-4 text-gray-600 align-top">{{ $ordem->bairro }}</td>
-                            <td class="px-4 py-3">
-                                <form method="POST" action="{{ route('ordens.atualizar-tecnico', $ordem) }}">
+                            <td class="px-4 py-4 align-middle text-gray-600">{{ $ordem->bairro }}</td>
+                            <td class="px-4 py-4 align-middle">
+                                <form method="POST" action="{{ route('ordens.atualizar-tecnico', $ordem) }}"
+                                    class="flex items-center">
                                     @csrf
                                     @method('PATCH')
                                     <select name="tecnico_id"
@@ -271,7 +276,7 @@
                                                 window.dispatchEvent(new CustomEvent('busy-start', { detail: { label: 'Atualizando técnico...' } }));
                                                 setTimeout(() => $el.form.submit(), 60)
                                             "
-                                        class="min-w-40 rounded-full border-[#b9d9c2] bg-[#f5fbf4] px-3 py-1 text-xs font-medium text-[#064b31] focus:border-[#ff7a00] focus:ring-[#ff7a00]">
+                                        class="app-select app-select-inline w-full min-w-40 max-w-44">
                                         <option value="">Sem técnico</option>
                                         @foreach ($tecnicosDisponiveis as $tecnico)
                                             <option value="{{ $tecnico->id }}"
@@ -282,34 +287,37 @@
                                     </select>
                                 </form>
                             </td>
-                            <td class="px-4 py-4 text-gray-600 align-top">
-                                {{ $ordem->data_marcacao->format('d/m/Y') }}<br>
-                                @php
-                                    $turnoCores = [
-                                        'manha' => 'bg-sky-100 text-sky-800 border-sky-200',
-                                        'tarde' => 'bg-amber-100 text-amber-800 border-amber-200',
-                                    ];
-                                @endphp
-                                <span
-                                    class="mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold tracking-wide {{ $turnoCores[$ordem->turno] ?? 'bg-gray-100 text-gray-700 border-gray-200' }}">
-                                    {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? ($ordem->turno ?? '-') }}
-                                </span>
+                            <td class="px-4 py-4 align-middle text-gray-600">
+                                <div class="flex flex-col items-start gap-1 leading-tight">
+                                    <span>{{ $ordem->data_marcacao->format('d/m/Y') }}</span>
+                                    @php
+                                        $turnoCores = [
+                                            'manha' => 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-400/15 dark:text-sky-200 dark:border-sky-400/20',
+                                            'tarde' => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-400/15 dark:text-amber-200 dark:border-amber-400/20',
+                                        ];
+                                    @endphp
+                                    <span
+                                        class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide {{ $turnoCores[$ordem->turno] ?? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600' }}">
+                                        {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? ($ordem->turno ?? '-') }}
+                                    </span>
+                                </div>
                             </td>
-                            <td class="px-4 py-4 align-top">
+                            <td class="px-4 py-4 align-middle">
                                 @php
                                     $cores = [
-                                        'normal' => 'bg-gray-100 text-gray-700',
-                                        'alta' => 'bg-yellow-100 text-yellow-700',
-                                        'urgente' => 'bg-red-100 text-red-700',
+                                        'normal' => 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200',
+                                        'alta' => 'bg-yellow-100 text-yellow-700 dark:bg-amber-400/15 dark:text-amber-200',
+                                        'urgente' => 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-200',
                                     ];
                                 @endphp
                                 <span
-                                    class="px-2 py-1 rounded-full text-xs font-medium {{ $cores[$ordem->prioridade] ?? 'bg-slate-100 text-slate-700' }}">
+                                    class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium leading-none {{ $cores[$ordem->prioridade] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200' }}">
                                     {{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? ($ordem->prioridade ?? '-') }}
                                 </span>
                             </td>
-                            <td class="px-4 py-4 align-top">
-                                <form method="POST" action="{{ route('ordens.atualizar-status', $ordem) }}">
+                            <td class="px-4 py-4 align-middle">
+                                <form method="POST" action="{{ route('ordens.atualizar-status', $ordem) }}"
+                                    class="flex items-center">
                                     @csrf
                                     @method('PATCH')
                                     <select name="status"
@@ -317,7 +325,7 @@
                                                 window.dispatchEvent(new CustomEvent('busy-start', { detail: { label: 'Atualizando status...' } }));
                                                 setTimeout(() => $el.form.submit(), 60)
                                             "
-                                        class="min-w-32 rounded-full border-[#b9d9c2] bg-[#f5fbf4] px-3 py-1 text-xs font-medium text-[#064b31] focus:border-[#ff7a00] focus:ring-[#ff7a00]">
+                                        class="app-select app-select-inline w-full min-w-32 max-w-36">
                                         @foreach (\App\Models\OrdemServico::STATUS as $key => $label)
                                             @continue($key === 'passada' && $ordem->status !== 'passada')
                                             <option value="{{ $key }}"
@@ -328,12 +336,12 @@
                                     </select>
                                 </form>
                             </td>
-                            <td class="px-4 py-4 align-top">
-                                <div class="flex items-center gap-3">
+                            <td class="px-4 py-4 align-middle">
+                                <div class="flex items-center gap-2.5">
                                     @if ($ordem->tecnico_id)
                                         <button type="button" title="Enviar serviço para o técnico pelo WhatsApp"
                                             x-on:click="openWhatsappModal(@js(route('ordens.enviar-whatsapp', $ordem)), @js('OS #' . $ordem->id . ' - ' . $ordem->cliente_nome))"
-                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white transition hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                                                 aria-hidden="true">
                                                 <path
@@ -344,7 +352,7 @@
                                     @endif
 
                                     <a href="{{ route('ordens.show', $ordem) }}"
-                                        class="inline-flex h-8 items-center rounded-full border border-[#b9d9c2] bg-white px-3 text-xs font-medium text-[#064b31] hover:border-[#ff7a00] hover:text-[#ff7a00] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-[#ff7a00] dark:hover:text-[#ffb366]">
+                                        class="inline-flex h-8 items-center rounded-full border border-[#b9d9c2] bg-white px-3 text-xs font-medium text-[#064b31] transition hover:border-[#ff7a00] hover:text-[#ff7a00] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-[#ff7a00] dark:hover:text-[#ffb366]">
                                         Ver
                                     </a>
 
