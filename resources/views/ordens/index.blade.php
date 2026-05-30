@@ -108,7 +108,12 @@
                             @endforeach
                         </select>
 
-                        <input type="date" name="data_marcacao" value="{{ $dataMarcacao }}" class="app-field">
+                        <input type="text"
+                               name="data_marcacao"
+                               value="{{ $dataMarcacao }}"
+                               data-datepicker
+                               placeholder="Selecionar data"
+                               class="app-field">
 
                         <div class="flex gap-2">
                             <button type="submit" class="app-btn-primary flex-1">Filtrar</button>
