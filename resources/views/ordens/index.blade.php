@@ -83,7 +83,7 @@
                         </select>
 
                         <select name="tecnico_id" class="app-select">
-                            <option value="">Todos os tçcnicos</option>
+                            <option value="">Todos os técnicos</option>
                             @foreach ($tecnicos as $tecnico)
                                 <option value="{{ $tecnico->id }}"
                                     {{ request('tecnico_id') == $tecnico->id ? 'selected' : '' }}>{{ $tecnico->nome }}
@@ -263,11 +263,11 @@
                                     @method('PATCH')
                                     <select name="tecnico_id"
                                         x-on:change="
-                                                window.dispatchEvent(new CustomEvent('busy-start', { detail: { label: 'Atualizando tçcnico...' } }));
+                                                window.dispatchEvent(new CustomEvent('busy-start', { detail: { label: 'Atualizando técnico...' } }));
                                                 setTimeout(() => $el.form.submit(), 60)
                                             "
                                         class="min-w-40 rounded-full border-[#b9d9c2] bg-[#f5fbf4] px-3 py-1 text-xs font-medium text-[#064b31] focus:border-[#ff7a00] focus:ring-[#ff7a00]">
-                                        <option value="">Sem tçcnico</option>
+                                        <option value="">Sem técnico</option>
                                         @foreach ($tecnicosDisponiveis as $tecnico)
                                             <option value="{{ $tecnico->id }}"
                                                 {{ (string) $ordem->tecnico_id === (string) $tecnico->id ? 'selected' : '' }}>
@@ -326,7 +326,7 @@
                             <td class="px-4 py-4 align-top">
                                 <div class="flex items-center gap-3">
                                     @if ($ordem->tecnico_id)
-                                        <button type="button" title="Enviar serviço para o tçcnico pelo WhatsApp"
+                                        <button type="button" title="Enviar serviço para o técnico pelo WhatsApp"
                                             x-on:click="openWhatsappModal(@js(route('ordens.enviar-whatsapp', $ordem)), @js('OS #' . $ordem->id . ' - ' . $ordem->cliente_nome))"
                                             class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
