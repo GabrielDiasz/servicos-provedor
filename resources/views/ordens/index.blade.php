@@ -108,12 +108,8 @@
                             @endforeach
                         </select>
 
-                        <input type="text"
-                               name="data_marcacao"
-                               value="{{ $dataMarcacao }}"
-                               data-datepicker
-                               placeholder="Selecionar data"
-                               class="app-field">
+                        <input type="text" name="data_marcacao" value="{{ $dataMarcacao }}" data-datepicker
+                            placeholder="Selecionar data" class="app-field">
 
                         <div class="flex gap-2">
                             <button type="submit" class="app-btn-primary flex-1">Filtrar</button>
@@ -124,9 +120,9 @@
             </div>
         </div>
 
-        <div class="mb-4 flex flex-nowrap gap-3 overflow-x-auto pb-1">
+        <div class="mb-1 flex flex-nowrap gap-2 overflow-x-auto pb-1">
             <div
-                class="min-w-[240px] shrink-0 flex-1 rounded-xl border border-blue-300/40 bg-gradient-to-r from-blue-50 to-white px-4 py-3 shadow-sm dark:border-blue-500/20 dark:from-blue-500/10 dark:to-[#2f2f2f]/90 dark:shadow-none">
+                class="min-w-[240px] shrink-0 flex-1 rounded-xl border border-blue-300/40 bg-gradient-to-r from-blue-50 to-white px-4  shadow-sm dark:border-blue-500/20 dark:from-blue-500/10 dark:to-[#2f2f2f]/90 dark:shadow-none">
                 <div class="flex min-h-14 items-center justify-between gap-4">
                     <div>
                         <p
@@ -141,7 +137,7 @@
             </div>
 
             <div
-                class="min-w-[240px] shrink-0 flex-1 rounded-xl border border-amber-300/40 bg-gradient-to-r from-amber-50 to-white px-4 py-3 shadow-sm dark:border-amber-500/20 dark:from-amber-500/10 dark:to-[#2f2f2f]/90 dark:shadow-none">
+                class="min-w-[240px] shrink-0 flex-1 rounded-xl border border-amber-300/40 bg-gradient-to-r from-amber-50 to-white px-4  shadow-sm dark:border-amber-500/20 dark:from-amber-500/10 dark:to-[#2f2f2f]/90 dark:shadow-none">
                 <div class="flex min-h-14 items-center justify-between gap-4">
                     <div>
                         <p
@@ -156,7 +152,7 @@
             </div>
 
             <div
-                class="min-w-[240px] shrink-0 flex-1 rounded-xl border border-emerald-300/40 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm dark:border-emerald-500/20 dark:from-emerald-500/10 dark:to-[#2f2f2f]/90 dark:shadow-none">
+                class="min-w-[240px] shrink-0 flex-1 rounded-xl border border-emerald-300/40 bg-gradient-to-r from-emerald-50 to-white px-4  shadow-sm dark:border-emerald-500/20 dark:from-emerald-500/10 dark:to-[#2f2f2f]/90 dark:shadow-none">
                 <div class="flex min-h-14 items-center justify-between gap-4">
                     <div>
                         <p
@@ -292,8 +288,10 @@
                                     <span>{{ $ordem->data_marcacao->format('d/m/Y') }}</span>
                                     @php
                                         $turnoCores = [
-                                            'manha' => 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-400/15 dark:text-sky-200 dark:border-sky-400/20',
-                                            'tarde' => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-400/15 dark:text-amber-200 dark:border-amber-400/20',
+                                            'manha' =>
+                                                'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-400/15 dark:text-sky-200 dark:border-sky-400/20',
+                                            'tarde' =>
+                                                'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-400/15 dark:text-amber-200 dark:border-amber-400/20',
                                         ];
                                     @endphp
                                     <span
@@ -306,7 +304,8 @@
                                 @php
                                     $cores = [
                                         'normal' => 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200',
-                                        'alta' => 'bg-yellow-100 text-yellow-700 dark:bg-amber-400/15 dark:text-amber-200',
+                                        'alta' =>
+                                            'bg-yellow-100 text-yellow-700 dark:bg-amber-400/15 dark:text-amber-200',
                                         'urgente' => 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-200',
                                     ];
                                 @endphp

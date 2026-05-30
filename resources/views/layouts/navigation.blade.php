@@ -67,7 +67,7 @@
 
                 <x-dropdown align="right" width="56">
                     <x-slot name="trigger">
-                        <button type="button" class="inline-flex items-center gap-2 rounded-md border border-[#444] bg-[#303030] px-3 py-2 text-sm font-medium leading-4 text-slate-200 shadow-sm transition duration-150 ease-in-out hover:border-[#ff5a00] hover:bg-[#383838] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#ff5a00] focus:ring-offset-2 focus:ring-offset-[#202020]">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-md border border-[#444] bg-[#303030] px-2 py-1  leading-4 text-slate-200 shadow-sm transition duration-150 ease-in-out hover:border-[#ff5a00] hover:bg-[#383838] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#ff5a00] focus:ring-offset-2 focus:ring-offset-[#202020]">
                             <span class="flex h-7 w-7 items-center justify-center rounded-md bg-[#3a3a3a] text-white/90">
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
@@ -75,7 +75,7 @@
                                 </svg>
                             </span>
 
-                            <span class="max-w-[9rem] truncate">{{ Auth::user()->name }}</span>
+                            <span class="max-w-[9rem] truncate text-slate-100 text-sm">{{ Auth::user()->name }}</span>
 
                             <div class="ms-1 text-slate-400">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
