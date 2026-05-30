@@ -10,7 +10,6 @@ class WhatsAppGrupoController extends Controller
     public function index()
     {
         $grupos = WhatsAppGrupo::query()
-            ->withCount('tecnicos')
             ->orderByDesc('ativo')
             ->orderBy('nome')
             ->paginate(20);

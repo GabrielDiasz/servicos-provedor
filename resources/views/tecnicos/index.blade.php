@@ -22,8 +22,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">Telefone</th>
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">Grupo</th>
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">Status</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">OS Passadas</th>
-                        <th class="px-4 py-3"></th>
+                                                <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
@@ -38,9 +37,6 @@
                                 @else
                                     <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">Inativo</span>
                                 @endif
-                            </td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-300">
-                                {{ $tecnico->ordens_abertas_count }}
                             </td>
                             <td class="px-4 py-4">
                                 <div class="flex items-center justify-end gap-2">
@@ -64,7 +60,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                            <td colspan="5" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
                                 Nenhum técnico cadastrado.
                             </td>
                         </tr>

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrdemServico;
 use App\Models\Tecnico;
 use App\Models\WhatsAppGrupo;
 use Illuminate\Http\Request;
@@ -12,9 +11,6 @@ class TecnicoController extends Controller
     public function index()
     {
         $tecnicos = Tecnico::with('whatsappGrupo')
-            ->withCount([
-                'ordensServico as ordens_abertas_count' => fn ($query) => $query->whereIn('status', OrdemServico::STATUS_ABERTOS),
-            ])
             ->orderBy('nome')
             ->paginate(20);
 

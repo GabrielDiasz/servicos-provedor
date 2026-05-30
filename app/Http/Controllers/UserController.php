@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrdemServico;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,10 +11,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $usuarios = User::withCount([
-            'ordensServico as ordens_abertas_count' => fn ($query) => $query->whereIn('status', OrdemServico::STATUS_ABERTOS),
-        ])
-            ->orderBy('name')
+        $usuarios = User::orderBy('name')
             ->paginate(20);
 
         return view('usuarios.index', compact('usuarios'));
