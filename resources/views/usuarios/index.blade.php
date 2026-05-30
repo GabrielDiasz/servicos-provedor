@@ -21,7 +21,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">Nome</th>
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">E-mail</th>
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">Perfil</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">OS Abertas</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">OS Passadas</th>
                         <th class="px-4 py-3"></th>
                     </tr>
                 </thead>

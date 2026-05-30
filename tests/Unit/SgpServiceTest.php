@@ -84,8 +84,10 @@ class SgpServiceTest extends TestCase
         $this->assertSame('28', $method->invoke($service, $ordemTeste, $html));
     }
 
-    public function test_resolver_tecnico_responsavel_retorna_nulo_quando_nao_existe_correspondencia(): void
+    public function test_resolver_tecnico_responsavel_usa_o_responsavel_padrao_quando_nao_existe_correspondencia(): void
     {
+        config()->set('services.sgp.default_responsavel', 'Responsavel Padrao');
+
         $service = new SgpService;
         $labelMethod = new ReflectionMethod($service, 'resolverTecnicoResponsavelLabel');
         $labelMethod->setAccessible(true);
@@ -97,8 +99,8 @@ class SgpServiceTest extends TestCase
 
         $html = '<select name="responsavel"><option value="21">Responsavel A</option><option value="22">Responsavel B</option></select>';
 
-        $this->assertNull($labelMethod->invoke($service, $ordem));
-        $this->assertNull($method->invoke($service, $ordem, $html));
+        $this->assertSame('Responsavel Padrao', $labelMethod->invoke($service, $ordem));
+        $this->assertSame('21', $method->invoke($service, $ordem, $html));
     }
 
     public function test_resolver_usuario_responsavel_usa_o_responsavel_padrao_configurado_quando_nao_encontra_correspondencia(): void
@@ -114,6 +116,29 @@ class SgpServiceTest extends TestCase
         $this->assertSame('42', $method->invoke($service, $html, 'Administrador'));
     }
 
+    public function test_resolver_usuario_responsavel_usa_o_mapeamento_do_atendente_logado(): void
+    {
+        config()->set('services.sgp.responsavel_usuario_map', [
+            [
+                'matchers' => ['Pablo Bomfim', 'pablo@gpr.local'],
+                'responsaveis' => ['Pablo', 'Pablo Bomfim'],
+            ],
+            [
+                'matchers' => ['Paulo Henrique', 'paulo@gpr.local'],
+                'responsaveis' => ['paulo', 'Paulo Henrique'],
+            ],
+        ]);
+
+        $service = new SgpService;
+        $method = new ReflectionMethod($service, 'resolverUsuarioResponsavelSgp');
+        $method->setAccessible(true);
+
+        $html = '<select name="usuario_responsavel"><option value="42">Pablo</option><option value="77">paulo</option><option value="88">Outro</option></select>';
+
+        $this->assertSame('42', $method->invoke($service, $html, 'Pablo Bomfim', 'pablo@gpr.local'));
+        $this->assertSame('77', $method->invoke($service, $html, 'Paulo Henrique', 'paulo@gpr.local'));
+    }
+
     public function test_conteudo_ocorrencia_sgp_usa_o_nome_do_servico_quando_nao_ha_observacao(): void
     {
         $service = new SgpService;
@@ -123,6 +148,7 @@ class SgpServiceTest extends TestCase
         $this->assertSame('INSTALAÇÃO', $method->invoke($service, new OrdemServico(['tipo_servico' => 'instalacao', 'observacao' => null])));
         $this->assertSame('REATIVAÇÃO', $method->invoke($service, new OrdemServico(['tipo_servico' => 'reativacao', 'observacao' => null])));
         $this->assertSame('MUDANÇA DE ENDEREÇO', $method->invoke($service, new OrdemServico(['tipo_servico' => 'mudanca_endereco', 'observacao' => null])));
+        $this->assertSame('TROCA DE SENHA', $method->invoke($service, new OrdemServico(['tipo_servico' => 'troca_senha', 'observacao' => null])));
         $this->assertSame('DESCONECTADO', $method->invoke($service, new OrdemServico(['tipo_servico' => 'desconectado', 'observacao' => null])));
         $this->assertSame('OSCILAÇÃO', $method->invoke($service, new OrdemServico(['tipo_servico' => 'reparo', 'observacao' => null])));
     }

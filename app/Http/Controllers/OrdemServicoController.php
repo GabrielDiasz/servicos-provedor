@@ -19,6 +19,7 @@ class OrdemServicoController extends Controller
                 'id',
                 'cliente_nome',
                 'cliente_telefone',
+                'sgp_cliente_link',
                 'tipo_servico',
                 'bairro',
                 'tecnico_id',
@@ -139,18 +140,27 @@ class OrdemServicoController extends Controller
             ->with('success', 'Ordem de serviço atualizada com sucesso!');
     }
 
-    public function enviarWhatsApp(OrdemServico $ordem, WhatsAppService $whatsApp, SgpService $sgp)
+    public function enviarWhatsApp(Request $request, OrdemServico $ordem, WhatsAppService $whatsApp, SgpService $sgp)
     {
-        $sincronizacao = $this->garantirSincronizacaoSgp($ordem, $sgp, Auth::user()?->name);
+        $abrirOcorrenciaSgp = $request->boolean('abrir_ocorrencia_sgp');
 
-        if ($sincronizacao['status'] !== 'synced') {
-            return back()->with('error', 'Não foi possível criar a ocorrência/OS no SGP antes do envio do WhatsApp: '.($sincronizacao['message'] ?? 'erro desconhecido.'));
+        if ($abrirOcorrenciaSgp) {
+            $sincronizacao = $this->garantirSincronizacaoSgp($ordem, $sgp, Auth::user()?->name, Auth::user()?->email);
+
+            if ($sincronizacao['status'] !== 'synced') {
+                return back()->with('error', 'Não foi possível criar a ocorrência/OS no SGP antes do envio do WhatsApp: '.($sincronizacao['message'] ?? 'erro desconhecido.'));
+            }
         }
 
         if ($whatsApp->enviarOrdemServico($ordem)) {
             $ordem->update(['status' => 'passada']);
 
-            return back()->with('success', 'Ordem de serviço enviada para o técnico pelo WhatsApp.');
+            return back()->with(
+                'success',
+                $abrirOcorrenciaSgp
+                    ? 'Ordem de serviço enviada para o técnico pelo WhatsApp e sincronizada com o SGP.'
+                    : 'Ordem de serviço enviada para o técnico pelo WhatsApp.'
+            );
         }
 
         return back()->with('error', 'Não foi possível enviar a ordem pelo WhatsApp. Confira se o serviço está conectado e se o técnico tem um grupo de envio válido.');
@@ -244,7 +254,7 @@ class OrdemServicoController extends Controller
         ];
     }
 
-    private function garantirSincronizacaoSgp(OrdemServico $ordem, SgpService $sgp, ?string $usuarioResponsavel = null): array
+    private function garantirSincronizacaoSgp(OrdemServico $ordem, SgpService $sgp, ?string $usuarioResponsavel = null, ?string $usuarioEmail = null): array
     {
         if (
             $ordem->sgp_sync_status === 'sincronizado'
@@ -259,7 +269,7 @@ class OrdemServicoController extends Controller
             ];
         }
 
-        $sincronizacao = $sgp->sincronizarOcorrenciaEOrdemServico($ordem, $usuarioResponsavel);
+        $sincronizacao = $sgp->sincronizarOcorrenciaEOrdemServico($ordem, $usuarioResponsavel, $usuarioEmail);
 
         if ($sincronizacao['status'] === 'synced') {
             $ordem->update([

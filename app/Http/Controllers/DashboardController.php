@@ -4,28 +4,29 @@ namespace App\Http\Controllers;
 
 use App\Models\OrdemServico;
 use App\Models\Tecnico;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $cacheKey = 'dashboard:summary:'.now()->format('Y-m-d-H-i');
+        $agora = now();
+        $selectedMonth = max(1, min(12, (int) $request->integer('month', $agora->month)));
+        $selectedYear = max(2020, min(2100, (int) $request->integer('year', $agora->year)));
+        $cacheKey = sprintf('dashboard:summary:%04d-%02d', $selectedYear, $selectedMonth);
 
-        $data = Cache::remember($cacheKey, 60, function () {
-            $agora = now();
-            $inicioMes = $agora->copy()->startOfMonth();
-            $inicioMesAnterior = $agora->copy()->subMonthNoOverflow()->startOfMonth();
+        $data = Cache::remember($cacheKey, 60, function () use ($selectedMonth, $selectedYear, $agora) {
+            $inicioMes = $agora->copy()->setYear($selectedYear)->setMonth($selectedMonth)->startOfMonth();
+            $fimMes = $inicioMes->copy()->endOfMonth();
+            $inicioMesAnterior = $inicioMes->copy()->subMonthNoOverflow()->startOfMonth();
             $fimMesAnterior = $inicioMes->copy()->subSecond();
-            $statusAbertos = OrdemServico::STATUS_ABERTOS;
-            $statusResumo = OrdemServico::STATUS_ABERTOS;
-
-            $tecnicosAtivos = Tecnico::where('ativo', true)->count();
 
             $servicosConcluidosNoMes = OrdemServico::query()
                 ->where('status', 'concluida')
-                ->whereBetween('updated_at', [$inicioMes, $agora])
+                ->whereBetween('updated_at', [$inicioMes, $fimMes])
                 ->count();
 
             $servicosConcluidosMesAnterior = OrdemServico::query()
@@ -33,29 +34,15 @@ class DashboardController extends Controller
                 ->whereBetween('updated_at', [$inicioMesAnterior, $fimMesAnterior])
                 ->count();
 
-            $osCriadasNoMes = OrdemServico::query()
-                ->whereBetween('created_at', [$inicioMes, $agora])
-                ->count();
-
-            $osCriadasMesAnterior = OrdemServico::query()
-                ->whereBetween('created_at', [$inicioMesAnterior, $fimMesAnterior])
-                ->count();
-
-            $osAbertas = OrdemServico::query()
-                ->whereIn('status', $statusAbertos)
+            $osPassadasNoMes = OrdemServico::query()
+                ->where('status', 'passada')
+                ->whereBetween('updated_at', [$inicioMes, $fimMes])
                 ->count();
 
             $servicosPorTecnico = OrdemServico::query()
                 ->select('tecnico_id', DB::raw('COUNT(*) as total'))
                 ->where('status', 'concluida')
-                ->whereBetween('updated_at', [$inicioMes, $agora])
-                ->groupBy('tecnico_id')
-                ->pluck('total', 'tecnico_id')
-                ->map(fn ($total) => (int) $total);
-
-            $osAbertasPorTecnico = OrdemServico::query()
-                ->select('tecnico_id', DB::raw('COUNT(*) as total'))
-                ->whereIn('status', $statusAbertos)
+                ->whereBetween('updated_at', [$inicioMes, $fimMes])
                 ->groupBy('tecnico_id')
                 ->pluck('total', 'tecnico_id')
                 ->map(fn ($total) => (int) $total);
@@ -70,26 +57,26 @@ class DashboardController extends Controller
                 ->map(function (Tecnico $tecnico) use ($servicosPorTecnico) {
                     $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
 
-                    return $tecnico;
+                    return [
+                        'id' => $tecnico->id,
+                        'nome' => $tecnico->nome,
+                        'ativo' => $tecnico->ativo,
+                        'servicos_mes' => $tecnico->servicos_mes,
+                    ];
                 })
                 ->sortByDesc('servicos_mes')
                 ->values();
 
-            $tecnicosSobrecarga = $tecnicosBase
-                ->map(function (Tecnico $tecnico) use ($servicosPorTecnico, $osAbertasPorTecnico) {
-                    $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
-                    $tecnico->os_abertas = (int) ($osAbertasPorTecnico[$tecnico->id] ?? 0);
-
-                    return $tecnico;
+            $tecnicosDesempenho = $tecnicos
+                ->reject(function (array $tecnico) {
+                    return Str::contains(Str::lower($tecnico['nome']), 'teste');
                 })
-                ->filter(fn (Tecnico $tecnico) => $tecnico->os_abertas >= 5)
-                ->sortByDesc('os_abertas')
                 ->values();
 
             $servicosConcluidosPorTipo = OrdemServico::query()
                 ->select('tipo_servico', DB::raw('COUNT(*) as total'))
                 ->where('status', 'concluida')
-                ->whereBetween('updated_at', [$inicioMes, $agora])
+                ->whereBetween('updated_at', [$inicioMes, $fimMes])
                 ->groupBy('tipo_servico')
                 ->pluck('total', 'tipo_servico');
 
@@ -104,50 +91,12 @@ class DashboardController extends Controller
                 ->sortByDesc('total')
                 ->values();
 
-            $statusAbertosPorStatus = OrdemServico::query()
-                ->select('status', DB::raw('COUNT(*) as total'))
-                ->whereIn('status', $statusResumo)
-                ->groupBy('status')
-                ->pluck('total', 'status');
-
-            $statusAbertosResumo = collect($statusResumo)
-                ->map(function (string $status) use ($statusAbertosPorStatus) {
-                    return [
-                        'key' => $status,
-                        'label' => OrdemServico::STATUS[$status] ?? $status,
-                        'total' => (int) ($statusAbertosPorStatus[$status] ?? 0),
-                    ];
-                })
-                ->values();
-
-            $osAbertasPorTipoCounts = OrdemServico::query()
-                ->select('tipo_servico', DB::raw('COUNT(*) as total'))
-                ->whereIn('status', $statusAbertos)
-                ->groupBy('tipo_servico')
-                ->pluck('total', 'tipo_servico');
-
-            $osAbertasPorTipo = collect(OrdemServico::TIPOS)
-                ->map(function ($label, $key) use ($osAbertasPorTipoCounts) {
-                    return [
-                        'key' => $key,
-                        'label' => $label,
-                        'total' => (int) ($osAbertasPorTipoCounts[$key] ?? 0),
-                    ];
-                })
-                ->sortByDesc('total')
-                ->values();
-
-            $clientesComMaisAbertas = OrdemServico::query()
-                ->selectRaw('COALESCE(sgp_cliente_id, cliente_nome) as cliente_key, MAX(cliente_nome) as cliente_nome, MAX(cliente_telefone) as cliente_telefone, COUNT(*) as total')
-                ->whereIn('status', $statusAbertos)
-                ->groupByRaw('COALESCE(sgp_cliente_id, cliente_nome)')
-                ->orderByDesc('total')
-                ->limit(10)
-                ->get();
-
-            $maiorQuantidadeTecnico = max($tecnicos->pluck('servicos_mes')->max() ?? 0, 1);
+            $maiorQuantidadeTecnico = max($tecnicosDesempenho->pluck('servicos_mes')->max() ?? 0, 1);
             $maiorQuantidadeTipoConcluido = max($tiposServico->pluck('total')->max() ?? 0, 1);
-            $maiorQuantidadeTipoAberto = max($osAbertasPorTipo->pluck('total')->max() ?? 0, 1);
+            $tecnicosLabels = $tecnicosDesempenho->map(fn (array $tecnico) => $tecnico['nome'])->values();
+            $tecnicosValores = $tecnicosDesempenho->map(fn (array $tecnico) => $tecnico['servicos_mes'])->values();
+            $tiposLabels = $tiposServico->map(fn (array $tipo) => $tipo['label'])->values();
+            $tiposValores = $tiposServico->map(fn (array $tipo) => $tipo['total'])->values();
 
             $comparativo = function (int $atual, int $anterior): array {
                 $delta = $atual - $anterior;
@@ -165,31 +114,98 @@ class DashboardController extends Controller
             };
 
             $metricasConclusao = $comparativo($servicosConcluidosNoMes, $servicosConcluidosMesAnterior);
-            $metricasCriacao = $comparativo($osCriadasNoMes, $osCriadasMesAnterior);
 
             return compact(
                 'inicioMes',
                 'inicioMesAnterior',
-                'tecnicosAtivos',
                 'servicosConcluidosNoMes',
-                'servicosConcluidosMesAnterior',
-                'osCriadasNoMes',
-                'osCriadasMesAnterior',
-                'osAbertas',
+                'osPassadasNoMes',
                 'tecnicos',
-                'tecnicosSobrecarga',
+                'tecnicosDesempenho',
                 'tiposServico',
-                'statusAbertosResumo',
-                'osAbertasPorTipo',
-                'clientesComMaisAbertas',
+                'tecnicosLabels',
+                'tecnicosValores',
+                'tiposLabels',
+                'tiposValores',
                 'maiorQuantidadeTecnico',
                 'maiorQuantidadeTipoConcluido',
-                'maiorQuantidadeTipoAberto',
-                'metricasConclusao',
-                'metricasCriacao'
+                'metricasConclusao'
             );
         });
 
+        $data['tecnicos'] = collect($data['tecnicos']);
+        $data['tiposServico'] = collect($data['tiposServico']);
+
+        $inicioHoje = $agora->copy()->startOfDay();
+        $fimHoje = $agora->copy()->endOfDay();
+        $osPassadasHojePorTecnico = OrdemServico::query()
+            ->select('tecnico_id', DB::raw('COUNT(*) as total'))
+            ->where('status', 'passada')
+            ->whereBetween('updated_at', [$inicioHoje, $fimHoje])
+            ->groupBy('tecnico_id')
+            ->pluck('total', 'tecnico_id')
+            ->map(fn ($total) => (int) $total);
+
+        $tecnicosBaseHoje = Tecnico::query()
+            ->where('ativo', true)
+            ->select(['id', 'nome', 'ativo'])
+            ->orderBy('nome')
+            ->get();
+
+        $data['tecnicosSobrecarga'] = $tecnicosBaseHoje
+            ->map(function (Tecnico $tecnico) use ($osPassadasHojePorTecnico) {
+                return [
+                    'id' => $tecnico->id,
+                    'nome' => $tecnico->nome,
+                    'ativo' => $tecnico->ativo,
+                    'os_passadas_dia' => (int) ($osPassadasHojePorTecnico[$tecnico->id] ?? 0),
+                ];
+            })
+            ->filter(fn (array $tecnico) => $tecnico['os_passadas_dia'] > 4)
+            ->sortByDesc('os_passadas_dia')
+            ->values();
+
+        $data['periodLabel'] = $this->formatMonthYearLabel($selectedMonth, $selectedYear);
+        $data['monthOptions'] = $this->monthOptions();
+        $data['yearOptions'] = $this->yearOptions($selectedYear);
+        $data['selectedMonth'] = $selectedMonth;
+        $data['selectedYear'] = $selectedYear;
+        $data['currentMonthLabel'] = $this->formatMonthYearLabel($agora->month, $agora->year);
+
         return view('dashboard', $data);
+    }
+
+    private function monthOptions(): array
+    {
+        return [
+            1 => 'Janeiro',
+            2 => 'Fevereiro',
+            3 => 'Março',
+            4 => 'Abril',
+            5 => 'Maio',
+            6 => 'Junho',
+            7 => 'Julho',
+            8 => 'Agosto',
+            9 => 'Setembro',
+            10 => 'Outubro',
+            11 => 'Novembro',
+            12 => 'Dezembro',
+        ];
+    }
+
+    private function yearOptions(int $selectedYear): array
+    {
+        $currentYear = now()->year;
+        $startYear = min($currentYear - 5, $selectedYear);
+        $endYear = max($currentYear + 1, $selectedYear);
+
+        return range($startYear, $endYear);
+    }
+
+    private function formatMonthYearLabel(int $month, int $year): string
+    {
+        $months = $this->monthOptions();
+
+        return ($months[$month] ?? 'Mês').' de '.$year;
     }
 }

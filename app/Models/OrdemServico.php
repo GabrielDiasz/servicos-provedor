@@ -67,11 +67,7 @@ class OrdemServico extends Model
     ];
 
     public const STATUS_ABERTOS = [
-        'pendente',
         'passada',
-        'retornar',
-        'sem_contato',
-        'sem_viabilidade',
     ];
 
     public const PRIORIDADES = [

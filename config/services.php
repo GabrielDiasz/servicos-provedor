@@ -51,11 +51,69 @@ return [
         'web_username' => env('SGP_WEB_USERNAME'),
         'web_password' => env('SGP_WEB_PASSWORD'),
         'default_responsavel' => env('SGP_DEFAULT_RESPONSAVEL'),
-        'tecnico_responsavel_map' => [
-            env('SGP_TECH_MATCHER_A') => env('SGP_RESPONSAVEL_A'),
-            env('SGP_TECH_MATCHER_B') => env('SGP_RESPONSAVEL_B'),
-            env('SGP_TECH_MATCHER_C') => env('SGP_RESPONSAVEL_C'),
-        ],
+        'responsavel_usuario_map' => (static function (): array {
+            $pares = [
+                [
+                    'matchers' => [env('ATTENDANT_PABLO_EMAIL'), env('ATTENDANT_PABLO_NAME')],
+                    'responsaveis' => [
+                        env('ATTENDANT_PABLO_SGP_RESPONSAVEL_NOME'),
+                        env('ATTENDANT_PABLO_SGP_RESPONSAVEL_LOGIN'),
+                    ],
+                ],
+                [
+                    'matchers' => [env('ATTENDANT_PAULO_EMAIL'), env('ATTENDANT_PAULO_NAME')],
+                    'responsaveis' => [
+                        env('ATTENDANT_PAULO_SGP_RESPONSAVEL_NOME'),
+                        env('ATTENDANT_PAULO_SGP_RESPONSAVEL_LOGIN'),
+                    ],
+                ],
+            ];
+
+            $mapa = [];
+
+            foreach ($pares as $par) {
+                $matchers = array_values(array_filter(array_map(
+                    static fn ($valor) => trim((string) $valor),
+                    $par['matchers'] ?? []
+                )));
+                $responsaveis = array_values(array_filter(array_map(
+                    static fn ($valor) => trim((string) $valor),
+                    $par['responsaveis'] ?? []
+                )));
+
+                if ($matchers !== [] && $responsaveis !== []) {
+                    $mapa[] = [
+                        'matchers' => $matchers,
+                        'responsaveis' => $responsaveis,
+                    ];
+                }
+            }
+
+            return $mapa;
+        })(),
+        'tecnico_responsavel_map' => (static function (): array {
+            $pares = [
+                ['matcher' => env('SGP_TECH_MATCHER_JHON'), 'responsavel' => env('SGP_RESPONSAVEL_JHON')],
+                ['matcher' => env('SGP_TECH_MATCHER_VANDERLEY'), 'responsavel' => env('SGP_RESPONSAVEL_VANDERLEY')],
+                ['matcher' => env('SGP_TECH_MATCHER_TESTE'), 'responsavel' => env('SGP_RESPONSAVEL_TESTE')],
+                ['matcher' => env('SGP_TECH_MATCHER_A'), 'responsavel' => env('SGP_RESPONSAVEL_A')],
+                ['matcher' => env('SGP_TECH_MATCHER_B'), 'responsavel' => env('SGP_RESPONSAVEL_B')],
+                ['matcher' => env('SGP_TECH_MATCHER_C'), 'responsavel' => env('SGP_RESPONSAVEL_C')],
+            ];
+
+            $mapa = [];
+
+            foreach ($pares as $par) {
+                $matcher = trim((string) ($par['matcher'] ?? ''));
+                $responsavel = trim((string) ($par['responsavel'] ?? ''));
+
+                if ($matcher !== '' && $responsavel !== '') {
+                    $mapa[$matcher] = $responsavel;
+                }
+            }
+
+            return $mapa;
+        })(),
         'timeout' => env('SGP_TIMEOUT', 15),
         'connect_timeout' => env('SGP_CONNECT_TIMEOUT', 5),
     ],

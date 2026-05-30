@@ -7,7 +7,10 @@ use App\Models\Tecnico;
 use App\Models\User;
 use App\Services\SgpService;
 use App\Services\WhatsAppService;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Mockery;
 use Tests\TestCase;
 
@@ -66,7 +69,7 @@ class OrdemServicoTelefoneTest extends TestCase
         ]);
     }
 
-    public function test_enviar_whatsapp_sincroniza_sgp_antes_de_enviar(): void
+    public function test_enviar_whatsapp_com_checkbox_abre_sgp_e_sincroniza_antes_de_enviar(): void
     {
         $user = User::factory()->create([
             'perfil' => 'admin',
@@ -106,7 +109,9 @@ class OrdemServicoTelefoneTest extends TestCase
         $this->app->instance(WhatsAppService::class, $whatsApp);
 
         $this->actingAs($user)
-            ->post(route('ordens.enviar-whatsapp', $ordem))
+            ->post(route('ordens.enviar-whatsapp', $ordem), [
+                'abrir_ocorrencia_sgp' => '1',
+            ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('ordens_servico', [
@@ -115,6 +120,54 @@ class OrdemServicoTelefoneTest extends TestCase
             'sgp_ocorrencia_numero' => '260528999999',
             'sgp_os_numero' => '14147',
             'sgp_sync_status' => 'sincronizado',
+        ]);
+    }
+
+    public function test_enviar_whatsapp_sem_checkbox_envia_apenas_outra_mensagem_sem_sgp(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Final',
+            'cliente_telefone' => '73999999999',
+            'bairro' => 'Tapera',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => null,
+            'user_id' => $user->id,
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+        ]);
+
+        $sgp = Mockery::mock(SgpService::class);
+        $sgp->shouldReceive('sincronizarOcorrenciaEOrdemServico')->never();
+
+        $whatsApp = Mockery::mock(WhatsAppService::class);
+        $whatsApp->shouldReceive('enviarOrdemServico')
+            ->once()
+            ->andReturn(true);
+
+        $this->app->instance(SgpService::class, $sgp);
+        $this->app->instance(WhatsAppService::class, $whatsApp);
+
+        $this->actingAs($user)
+            ->post(route('ordens.enviar-whatsapp', $ordem), [
+                'abrir_ocorrencia_sgp' => '0',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'status' => 'passada',
+            'sgp_ocorrencia_numero' => null,
+            'sgp_os_numero' => null,
+            'sgp_sync_status' => null,
         ]);
     }
 
@@ -197,5 +250,52 @@ class OrdemServicoTelefoneTest extends TestCase
             'sgp_cliente_id' => 5151,
             'sgp_contrato_id' => 5151,
         ]);
+    }
+
+    public function test_index_mostra_cliente_como_link_do_sgp_em_nova_aba(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $ordem = new OrdemServico([
+            'cliente_nome' => 'Cliente SGP',
+            'cliente_telefone' => '73999999999',
+            'sgp_cliente_link' => 'https://seu-sgp.exemplo/admin/cliente/5151/edit/',
+            'bairro' => 'Centro',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'user_id' => $user->id,
+        ]);
+
+        $ordem->save();
+
+        $this->actingAs($user);
+
+        $ordens = new LengthAwarePaginator(
+            collect([$ordem]),
+            1,
+            20,
+            1,
+            [
+                'path' => route('ordens.index'),
+                'pageName' => 'page',
+            ]
+        );
+
+        $html = view('ordens.index', [
+            'ordens' => $ordens,
+            'tecnicos' => Collection::make(),
+            'tecnicosDisponiveis' => Collection::make(),
+            'dataMarcacao' => now()->toDateString(),
+        ])->render();
+
+        $this->assertStringContainsString('href="https://seu-sgp.exemplo/admin/cliente/5151/edit/"', $html);
+        $this->assertStringContainsString('target="_blank"', $html);
+        $this->assertStringContainsString('rel="noopener noreferrer"', $html);
+        $this->assertStringContainsString('Cliente SGP', $html);
     }
 }

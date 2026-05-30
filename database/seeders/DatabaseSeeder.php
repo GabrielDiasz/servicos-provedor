@@ -27,6 +27,18 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        $this->criarOuAtualizarAtendente(
+            'ATTENDANT_PABLO',
+            'Pablo Bomfim',
+            'pablo@gpr.local'
+        );
+
+        $this->criarOuAtualizarAtendente(
+            'ATTENDANT_PAULO',
+            'Paulo Henrique',
+            'paulo@gpr.local'
+        );
+
         $grupoId = trim((string) env('WHATSAPP_TEST_GROUP_ID', ''));
         $grupoNome = trim((string) env('WHATSAPP_TEST_GROUP_NAME', ''));
 
@@ -38,5 +50,24 @@ class DatabaseSeeder extends Seeder
                 'ativo' => true,
             ]);
         }
+    }
+
+    private function criarOuAtualizarAtendente(string $prefixo, string $nomePadrao, string $emailPadrao): void
+    {
+        $nome = trim((string) env($prefixo.'_NAME', $nomePadrao));
+        $email = trim((string) env($prefixo.'_EMAIL', $emailPadrao));
+        $password = trim((string) env($prefixo.'_PASSWORD', ''));
+
+        if ($email === '' || $password === '') {
+            return;
+        }
+
+        User::updateOrCreate([
+            'email' => $email,
+        ], [
+            'name' => $nome !== '' ? $nome : $nomePadrao,
+            'perfil' => 'atendente',
+            'password' => Hash::make($password),
+        ]);
     }
 }

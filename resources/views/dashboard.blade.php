@@ -15,126 +15,113 @@
     };
 
     $deltaConclusao = $formatarDelta($metricasConclusao);
-    $deltaCriacao = $formatarDelta($metricasCriacao);
-    $statusResumo = $statusAbertosResumo->keyBy('key');
-
-    $tecnicosLabels = $tecnicos->pluck('nome')->values();
-    $tecnicosValores = $tecnicos->pluck('servicos_mes')->values();
-    $tiposLabels = $tiposServico->pluck('label')->values();
-    $tiposValores = $tiposServico->pluck('total')->values();
-    $tiposAbertosLabels = $osAbertasPorTipo->pluck('label')->values();
-    $tiposAbertosValores = $osAbertasPorTipo->pluck('total')->values();
 @endphp
 
 <x-app-layout>
-    <div class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <section class="overflow-hidden rounded-3xl border border-[#d9e8db] bg-gradient-to-r from-[#064b31] via-[#0a5f3f] to-[#ff7a00] p-6 text-white shadow-xl dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-            <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <form method="GET" action="{{ route('dashboard') }}" class="app-surface p-4 dark:bg-[#333333]">
+            <div class="grid gap-4 lg:grid-cols-[1.3fr_auto] lg:items-center">
                 <div>
-                    <span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/90">
-                        Visão geral do mês
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff7a00]">Período</p>
+                    <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Filtre por mês e ano para revisar a operação.
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200/80 bg-white/75 px-3 py-3 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-white/5">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(10rem,11rem)_minmax(7rem,8rem)_auto] sm:items-end">
+                        <div>
+                            <label for="month" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                                Mês
+                            </label>
+                            <select id="month" name="month" class="app-select w-full">
+                                @foreach($monthOptions as $value => $label)
+                                    <option value="{{ $value }}" {{ (int) $selectedMonth === (int) $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="year" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                                Ano
+                            </label>
+                            <select id="year" name="year" class="app-select w-full">
+                                @foreach($yearOptions as $year)
+                                    <option value="{{ $year }}" {{ (int) $selectedYear === (int) $year ? 'selected' : '' }}>
+                                        {{ $year }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <button type="submit" class="app-btn-primary h-11 px-6 sm:ml-1">
+                            Filtrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <section class="overflow-hidden rounded-[28px] border border-slate-700/70 bg-[linear-gradient(135deg,#0b1220_0%,#101929_48%,#16243a_100%)] text-white shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+            <div class="h-1 bg-gradient-to-r from-[#ff7a00] via-[#ff9b45] to-transparent"></div>
+            <div class="grid gap-6 px-6 py-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8 lg:px-8 lg:py-8">
+                <div class="space-y-4">
+                    <span class="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/90">
+                        Visão geral do mês de {{ $periodLabel }}
                     </span>
-                    <h3 class="mt-4 text-3xl font-bold leading-tight sm:text-4xl">
+                    <h3 class="max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
                         Tudo que importa para a operação em uma tela.
                     </h3>
-                    <p class="mt-3 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
+                    <p class="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                         Compare o ritmo de atendimento, veja onde estão as maiores filas e identifique rapidamente
                         os pontos de atenção dos técnicos e dos clientes.
                     </p>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <div class="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                        <p class="text-xs uppercase tracking-[0.18em] text-white/70">Serviços concluídos</p>
-                        <div class="mt-2 flex items-end justify-between gap-4">
-                            <span class="text-3xl font-bold">{{ $servicosConcluidosNoMes }}</span>
+                <div class="grid gap-3">
+                    <div class="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-sm backdrop-blur-sm">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.2em] text-white/60">Serviços concluídos</p>
+                                <p class="mt-2 text-4xl font-semibold tracking-tight text-white">{{ $servicosConcluidosNoMes }}</p>
+                            </div>
                             <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $deltaConclusao['badge'] }}">
                                 {{ $deltaConclusao['texto'] }}
                             </span>
                         </div>
-                    </div>
-                    <div class="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                        <p class="text-xs uppercase tracking-[0.18em] text-white/70">Novas OS</p>
-                        <div class="mt-2 flex items-end justify-between gap-4">
-                            <span class="text-3xl font-bold">{{ $osCriadasNoMes }}</span>
-                            <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $deltaCriacao['badge'] }}">
-                                {{ $deltaCriacao['texto'] }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                        <p class="text-xs uppercase tracking-[0.18em] text-white/70">OS abertas</p>
-                        <p class="mt-2 text-3xl font-bold">{{ $osAbertas }}</p>
-                        <p class="mt-1 text-xs text-white/75">Pendentes, passadas, retornos, sem contato e sem viabilidade.</p>
-                    </div>
-                    <div class="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                        <p class="text-xs uppercase tracking-[0.18em] text-white/70">Técnicos ativos</p>
-                        <p class="mt-2 text-3xl font-bold">{{ $tecnicosAtivos }}</p>
-                        <p class="mt-1 text-xs text-white/75">
-                            {{ $tecnicosSobrecarga->count() }} com fila acima do ideal.
+                        <p class="mt-3 text-sm leading-6 text-white/70">
+                            Finalizados dentro do período selecionado.
                         </p>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
+                            <p class="text-xs uppercase tracking-[0.2em] text-white/60">OS passadas</p>
+                            <p class="mt-2 text-3xl font-semibold tracking-tight text-white">{{ $osPassadasNoMes }}</p>
+                            <p class="mt-2 text-xs leading-5 text-white/70">Somente OS com status passada.</p>
+                        </div>
+                        <div class="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
+                            <p class="text-xs uppercase tracking-[0.2em] text-white/60">Técnicos sobrecarregados</p>
+                            <p class="mt-2 text-3xl font-semibold tracking-tight text-white">{{ $tecnicosSobrecarga->count() }}</p>
+                            <p class="mt-2 text-xs leading-5 text-white/70">Mais de 4 OS passadas hoje.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
-
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl border border-[#d7e6d9] bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-                <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">Serviços concluídos</p>
-                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $deltaConclusao['badge'] }}">
-                        {{ $deltaConclusao['sinal'] === 'alta' ? 'cresceu' : ($deltaConclusao['sinal'] === 'baixa' ? 'caiu' : 'estável') }}
-                    </span>
-                </div>
-                <p class="mt-3 text-3xl font-bold text-[#064b31] dark:text-emerald-400">{{ $servicosConcluidosNoMes }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                    {{ $deltaConclusao['texto'] }}
-                </p>
-            </div>
-
-            <div class="rounded-2xl border border-[#d7e6d9] bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-                <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">Novas OS</p>
-                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $deltaCriacao['badge'] }}">
-                        {{ $deltaCriacao['sinal'] === 'alta' ? 'cresceu' : ($deltaCriacao['sinal'] === 'baixa' ? 'caiu' : 'estável') }}
-                    </span>
-                </div>
-                <p class="mt-3 text-3xl font-bold text-[#ff7a00] dark:text-amber-400">{{ $osCriadasNoMes }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                    {{ $deltaCriacao['texto'] }}
-                </p>
-            </div>
-
-            <div class="rounded-2xl border border-[#d7e6d9] bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">OS abertas</p>
-                <p class="mt-3 text-3xl font-bold text-sky-700 dark:text-sky-400">{{ $osAbertas }}</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                    @foreach(['pendente', 'retornar', 'sem_viabilidade'] as $status)
-                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                            {{ $statusResumo[$status]['label'] ?? $status }}: {{ $statusResumo[$status]['total'] ?? 0 }}
-                        </span>
-                    @endforeach
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-[#d7e6d9] bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">Técnicos sobrecarregados</p>
-                <p class="mt-3 text-3xl font-bold text-rose-600 dark:text-rose-400">{{ $tecnicosSobrecarga->count() }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                    Com 5 ou mais OS abertas.
-                </p>
-            </div>
-        </div>
 
         <div class="grid gap-6 xl:grid-cols-2">
             <section class="rounded-2xl border border-[#d7e6d9] bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Desempenho dos técnicos</h3>
-                        <p class="text-sm text-gray-500 dark:text-slate-400">Serviços concluídos no mês atual.</p>
+                        <p class="text-sm text-gray-500 dark:text-slate-400">Serviços concluídos no período selecionado.</p>
                     </div>
                     <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        {{ $tecnicos->count() }} técnicos
+                        {{ $tecnicosDesempenho->count() }} técnicos
                     </span>
                 </div>
 
@@ -152,7 +139,7 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Tipos de serviço concluídos</h3>
-                        <p class="text-sm text-gray-500 dark:text-slate-400">Distribuição dos atendimentos finalizados no mês.</p>
+                        <p class="text-sm text-gray-500 dark:text-slate-400">Distribuição dos atendimentos finalizados no período.</p>
                     </div>
                     <span class="rounded-full bg-[#fff3e6] px-3 py-1 text-xs font-semibold text-[#b65300] dark:bg-amber-950/40 dark:text-amber-300">
                         Top {{ $tiposServico->count() }}
@@ -170,112 +157,5 @@
                 </div>
             </section>
         </div>
-
-        <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <section class="rounded-2xl border border-[#d7e6d9] bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">OS abertas por tipo</h3>
-                        <p class="text-sm text-gray-500 dark:text-slate-400">Filas que ainda precisam de atenção.</p>
-                    </div>
-                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800 dark:bg-sky-950/40 dark:text-sky-300">
-                        {{ $osAbertasPorTipo->sum('total') }} abertas
-                    </span>
-                </div>
-
-                <div class="mt-5 grid gap-6 lg:grid-cols-[1fr_0.95fr]">
-                    <div class="h-[300px]">
-                        <canvas
-                            data-dashboard-chart="doughnut"
-                            data-chart-title="OS abertas por tipo"
-                            data-labels='@json($tiposAbertosLabels)'
-                            data-values='@json($tiposAbertosValores)'
-                        ></canvas>
-                    </div>
-
-                    <div class="space-y-3">
-                        @foreach($osAbertasPorTipo as $item)
-                            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
-                                <div class="flex items-center justify-between gap-3">
-                                    <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $item['label'] }}</span>
-                                    <span class="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                                        {{ $item['total'] }}
-                                    </span>
-                                </div>
-                                <div class="mt-3 h-2 rounded-full bg-slate-200 dark:bg-slate-700">
-                                    <div class="h-2 rounded-full bg-sky-600 dark:bg-sky-500"
-                                         style="width: {{ ($item['total'] / $maiorQuantidadeTipoAberto) * 100 }}%"></div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </section>
-
-            <section class="rounded-2xl border border-[#d7e6d9] bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Alertas operacionais</h3>
-                        <p class="text-sm text-gray-500 dark:text-slate-400">Técnicos com fila acima do ideal e clientes com mais OS abertas.</p>
-                    </div>
-                </div>
-
-                <div class="mt-5 space-y-4">
-                    <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/20">
-                        <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">Técnicos sobrecarregados</h4>
-                        <div class="mt-3 space-y-2">
-                            @forelse($tecnicosSobrecarga as $tecnico)
-                                <div class="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm shadow-sm dark:bg-slate-900">
-                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $tecnico->nome }}</span>
-                                    <span class="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
-                                        {{ $tecnico->os_abertas }} OS abertas
-                                    </span>
-                                </div>
-                            @empty
-                                <p class="text-sm text-amber-900/80 dark:text-amber-200/80">Nenhum técnico acima do limite ideal neste momento.</p>
-                            @endforelse
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
-                        <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Clientes com mais OS abertas</h4>
-                        <div class="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                            <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                                <thead class="bg-slate-100 dark:bg-slate-800">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Cliente</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Abertas</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-200 bg-white dark:divide-slate-700 dark:bg-slate-900">
-                                    @forelse($clientesComMaisAbertas as $cliente)
-                                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                                            <td class="px-4 py-3 text-slate-900 dark:text-slate-100">
-                                                <div class="font-medium">{{ $cliente->cliente_nome }}</div>
-                                                <div class="text-xs text-slate-500 dark:text-slate-400">{{ $cliente->cliente_telefone ?? '-' }}</div>
-                                            </td>
-                                            <td class="px-4 py-3">
-                                                <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                                                    {{ $cliente->total }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="2" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
-                                                Nenhuma OS aberta encontrada.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-
     </div>
 </x-app-layout>
-
-

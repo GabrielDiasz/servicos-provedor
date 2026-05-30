@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class SgpService
 {
-    public function sincronizarOcorrenciaEOrdemServico(OrdemServico $ordem, ?string $usuarioResponsavel = null): array
+    public function sincronizarOcorrenciaEOrdemServico(OrdemServico $ordem, ?string $usuarioResponsavel = null, ?string $usuarioEmail = null): array
     {
         if (! config('services.sgp.enabled')) {
             return [
@@ -58,7 +58,7 @@ class SgpService
                 throw new \RuntimeException('Não foi possível obter o número da ocorrência no SGP.');
             }
 
-            $usuarioSgp = $this->resolverUsuarioResponsavelSgp($ocorrenciaHtml, $usuarioResponsavel);
+            $usuarioSgp = $this->resolverUsuarioResponsavelSgp($ocorrenciaHtml, $usuarioResponsavel, $usuarioEmail);
             $dataAgendamento = now()->format('d/m/Y H:i:s');
             $conteudoOcorrencia = $this->conteudoOcorrenciaSgp($ordem);
 
@@ -573,10 +573,45 @@ class SgpService
         return $this->resolverOpcaoPorTexto($html, 'prioridade', $texto, '2') ?? '2';
     }
 
-    private function resolverUsuarioResponsavelSgp(string $html, ?string $usuarioResponsavel = null): ?string
+    private function resolverUsuarioResponsavelSgp(string $html, ?string $usuarioResponsavel = null, ?string $usuarioEmail = null): ?string
     {
+        foreach (config('services.sgp.responsavel_usuario_map', []) as $entry) {
+            $matchers = array_filter(array_map(static fn ($valor) => trim((string) $valor), $entry['matchers'] ?? []));
+            $responsaveis = array_values(array_filter(array_map(
+                static fn ($valor) => trim((string) $valor),
+                $entry['responsaveis'] ?? []
+            )));
+
+            if ($responsaveis === [] || $matchers === []) {
+                continue;
+            }
+
+            foreach (array_filter([$usuarioResponsavel, $usuarioEmail]) as $candidato) {
+                $candidatoNormalizado = $this->normalizarBusca((string) $candidato);
+
+                foreach ($matchers as $matcher) {
+                    if ($candidatoNormalizado !== '' && $candidatoNormalizado === $this->normalizarBusca($matcher)) {
+                        foreach ($responsaveis as $responsavel) {
+                            $resolvido = $this->resolverOpcaoPorTexto($html, 'usuario_responsavel', $responsavel)
+                                ?? $this->resolverOpcaoPorTexto($html, 'responsavel', $responsavel)
+                                ?? $this->resolverOpcaoPorTexto($html, 'usuariorresponsavel', $responsavel);
+
+                            if ($resolvido) {
+                                return $resolvido;
+                            }
+                        }
+
+                        return $this->resolverOpcaoPorTexto($html, 'usuario_responsavel', $matcher)
+                            ?? $this->resolverOpcaoPorTexto($html, 'responsavel', $matcher)
+                            ?? $this->resolverOpcaoPorTexto($html, 'usuariorresponsavel', $matcher);
+                    }
+                }
+            }
+        }
+
         $candidatos = array_values(array_filter(array_unique([
             $usuarioResponsavel,
+            $usuarioEmail,
             config('services.sgp.web_username'),
             config('services.sgp.default_responsavel'),
         ])));
@@ -599,7 +634,7 @@ class SgpService
         $nomeTecnico = mb_strtolower(trim((string) data_get($ordem, 'tecnico.nome')));
 
         if ($nomeTecnico === '') {
-            return null;
+            return $this->responsavelPadraoSgp();
         }
 
         $mapa = array_filter(config('services.sgp.tecnico_responsavel_map', []));
@@ -612,19 +647,49 @@ class SgpService
             }
         }
 
-        return null;
+        return $this->responsavelPadraoSgp();
     }
 
     private function resolverTecnicoResponsavelSgp(OrdemServico $ordem, string $html): ?string
     {
         $label = $this->resolverTecnicoResponsavelLabel($ordem);
 
-        if (! $label) {
+        if ($label) {
+            return $this->resolverOpcaoPorTexto($html, 'responsavel', $label)
+                ?? $this->resolverOpcaoPorTexto($html, 'tecnicos', $label)
+                ?? $this->primeiraOpcaoNaoVazia($html, 'responsavel')
+                ?? $this->primeiraOpcaoNaoVazia($html, 'tecnicos');
+        }
+
+        return $this->primeiraOpcaoNaoVazia($html, 'responsavel')
+            ?? $this->primeiraOpcaoNaoVazia($html, 'tecnicos');
+    }
+
+    private function responsavelPadraoSgp(): ?string
+    {
+        return trim((string) (config('services.sgp.default_responsavel') ?: config('services.sgp.web_username') ?: '')) ?: null;
+    }
+
+    private function primeiraOpcaoNaoVazia(string $html, string $name): ?string
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+        $xpath = new \DOMXPath($dom);
+        $nodes = $xpath->query("//select[@name='{$name}']/option");
+
+        if (! $nodes) {
             return null;
         }
 
-        return $this->resolverOpcaoPorTexto($html, 'responsavel', $label)
-            ?? $this->resolverOpcaoPorTexto($html, 'tecnicos', $label);
+        foreach ($nodes as $option) {
+            $value = trim($option->getAttribute('value'));
+
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function conteudoOcorrenciaSgp(OrdemServico $ordem): string
@@ -639,6 +704,7 @@ class SgpService
             'instalacao' => 'INSTALAÇÃO',
             'reativacao' => 'REATIVAÇÃO',
             'mudanca_endereco' => 'MUDANÇA DE ENDEREÇO',
+            'troca_senha' => 'TROCA DE SENHA',
             'desconectado' => 'DESCONECTADO',
             'reparo' => 'OSCILAÇÃO',
             default => 'SEM OBSERVAÇÃO',
