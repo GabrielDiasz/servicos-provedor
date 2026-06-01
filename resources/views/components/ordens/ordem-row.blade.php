@@ -26,8 +26,27 @@
     <td class="px-4 py-3.5 align-middle text-sm font-medium text-[#d7d7dc]">
         {{ $ordem->tipo_servico_label }}
     </td>
-    <td class="px-4 py-3.5 align-middle text-[12px] text-[#8b8b95]">
-        <span class="block max-w-[11rem] truncate">{{ $ordem->bairro }}</span>
+    <td class="px-4 py-3.5 align-middle">
+        <div class="flex items-center gap-2 text-[13px] text-[#c7c7d1]">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5 text-[#ff5a00]"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+
+            <span class="truncate max-w-[10rem]">
+                {{ $ordem->bairro }}
+            </span>
+        </div>
     </td>
     <td class="px-4 py-3.5 align-middle">
         <form method="POST" action="{{ route('ordens.atualizar-tecnico', $ordem) }}" class="flex items-center">
