@@ -110,8 +110,11 @@
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data *</label>
-                        <input type="date" name="data_marcacao"
+                        <input type="text" name="data_marcacao"
                                value="{{ old('data_marcacao', $ordem->data_marcacao->format('Y-m-d')) }}"
+                               data-datepicker
+                               placeholder="Selecionar data"
+                               autocomplete="off"
                                class="app-field w-full" required>
                     </div>
 
@@ -198,6 +201,5 @@
         });
     </script>
 </x-app-layout>
-
 
 

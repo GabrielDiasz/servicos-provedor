@@ -117,6 +117,12 @@
         },
     }"
     x-on:keydown.escape.window="open = false"
+    x-on:click.window="
+        if (!open) return;
+        if ($refs.trigger && $refs.trigger.contains($event.target)) return;
+        if ($refs.panel && $refs.panel.contains($event.target)) return;
+        open = false;
+    "
     x-on:resize.window="open && updatePanelPosition()"
     x-on:scroll.window="open && updatePanelPosition()"
 >
@@ -140,7 +146,9 @@
         x-ref="trigger"
         type="button"
         class="sgp-select-trigger {{ $size === 'sm' ? 'sgp-select-trigger-sm' : '' }}"
-        x-on:click="togglePanel()"
+        x-on:click.stop="togglePanel()"
+        x-on:keydown.enter.prevent="togglePanel()"
+        x-on:keydown.space.prevent="togglePanel()"
         x-bind:aria-expanded="open.toString()"
         aria-haspopup="listbox"
         aria-controls="{{ $inputId }}-panel"
@@ -157,7 +165,8 @@
             x-show="open"
             x-cloak
             x-transition.opacity
-            x-on:click.outside="open = false"
+            x-on:click.stop
+            x-ref="panel"
             id="{{ $inputId }}-panel"
             role="listbox"
             class="sgp-select-panel"

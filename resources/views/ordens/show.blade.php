@@ -2,9 +2,10 @@
     <x-slot name="header">
         <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff5a00]">Ordem de Servico</p>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff5a00]">Ordem de Serviço</p>
                 <h2 class="mt-1 text-xl font-bold text-gray-900 dark:text-white">OS #{{ $ordem->id }}</h2>
             </div>
+
             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                 @if($ordem->tecnico_id)
                     <form method="POST" action="{{ route('ordens.enviar-whatsapp', $ordem) }}" x-on:submit="$dispatch('busy-start', { label: 'Enviando WhatsApp...' })">
@@ -32,155 +33,206 @@
         </div>
     </x-slot>
 
-    <div class="py-5 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div class="app-surface divide-y divide-slate-200 overflow-hidden dark:divide-[#4a4a4a]">
-
-            <div class="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Cliente</p>
-                    <p class="text-gray-900 font-medium mt-1 dark:text-slate-100">{{ $ordem->cliente_nome }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Telefone</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->cliente_telefone }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Bairro</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->bairro }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Tipo de Serviço</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Data / Turno</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">
-                        {{ $ordem->data_marcacao->format('d/m/Y') }} -
-                        {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? $ordem->turno ?? '-' }}
-                    </p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Técnico</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->tecnico->nome ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Prioridade</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? $ordem->prioridade ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Status</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Atendente</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->atendente->name ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Criada em</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->created_at->format('d/m/Y H:i') }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Sincronização SGP</p>
-                    <p class="text-gray-900 mt-1 dark:text-slate-100">
-                        @if($ordem->sgp_sync_status === 'sincronizado')
-                            <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                Sincronizado
+    <div class="py-4">
+        <div class="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+            <div class="app-surface overflow-hidden">
+                <div class="border-b border-slate-200/80 px-4 py-4 dark:border-[#4a4a4a] sm:px-5">
+                    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {{ $ordem->cliente_nome }}
                             </span>
-                        @elseif($ordem->sgp_sync_status === 'erro')
-                            <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800 dark:bg-red-950/40 dark:text-red-300">
-                                Erro
+                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {{ $ordem->bairro }}
                             </span>
-                        @elseif($ordem->sgp_sync_status === 'ignorado')
-                            <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                Ignorado
+                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {{ $ordem->data_marcacao->format('d/m/Y') }} · {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? $ordem->turno ?? '-' }}
                             </span>
-                        @else
-                            -
-                        @endif
-                    </p>
-                </div>
-            </div>
+                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status ?? '-' }}
+                            </span>
+                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? $ordem->prioridade ?? '-' }}
+                            </span>
+                        </div>
 
-            @if($ordem->observacao)
-                <div class="p-6">
-                    <p class="text-xs text-gray-500 uppercase font-medium mb-1 dark:text-slate-400">Observação</p>
-                    <p class="text-gray-700 text-sm dark:text-slate-300">{{ $ordem->observacao }}</p>
-                </div>
-            @endif
-
-            @if($ordem->sgp_contrato_id || $ordem->sgp_pppoe_login || $ordem->sgp_plano || $ctoInfo['has_cto'] || $ctoInfo['has_porta'])
-                <div class="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Contrato SGP</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_contrato_id ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">CPF/CNPJ</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_cpf_cnpj ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Nascimento</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_data_nascimento?->format('d/m/Y') ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Plano</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_plano ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Vencimento</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_vencimento ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Ocorrência SGP</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_ocorrencia_numero ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">OS SGP</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_os_numero ?? '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">PPPoE</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_pppoe_login ?? '-' }} / {{ $ordem->sgp_pppoe_senha ?? '-' }}</p>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">CTO / Porta</p>
-                        <div class="mt-1 flex flex-wrap items-center gap-2">
-                            @if($ctoInfo['has_cto'])
-                                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                    CTO: {{ $ctoInfo['cto'] }}
-                                </span>
-
-                                @if($ctoInfo['has_porta'])
-                                    <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
-                                        Porta: {{ $ctoInfo['porta'] }}
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
-                                        Porta: sem porta
-                                    </span>
-                                @endif
-                            @else
-                                <span class="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-                                    Sem CTO
-                                </span>
-                                @if($ctoInfo['has_porta'])
-                                    <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
-                                        Porta: {{ $ctoInfo['porta'] }}
-                                    </span>
-                                @endif
-                            @endif
+                        <div class="flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                            <span>Atendente: <strong class="text-slate-900 dark:text-slate-100">{{ $ordem->atendente->name ?? '-' }}</strong></span>
+                            <span class="hidden sm:inline">•</span>
+                            <span>Criada em: <strong class="text-slate-900 dark:text-slate-100">{{ $ordem->created_at->format('d/m/Y H:i') }}</strong></span>
+                            <span class="hidden xl:inline">•</span>
+                            <span class="hidden xl:inline">Sincronização SGP:
+                                <strong class="text-slate-900 dark:text-slate-100">
+                                    {{ \Illuminate\Support\Str::headline($ordem->sgp_sync_status ?? '-') }}
+                                </strong>
+                            </span>
                         </div>
                     </div>
-                    <div class="sm:col-span-2">
-                        <p class="text-xs text-gray-500 uppercase font-medium dark:text-slate-400">Endereço SGP</p>
-                        <p class="text-gray-900 mt-1 dark:text-slate-100">{{ $ordem->sgp_endereco ?? '-' }}</p>
-                    </div>
                 </div>
-            @endif
 
+                <div class="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,1fr)]">
+                    <section class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-[#4a4a4a] dark:bg-[#2f2f2f]">
+                        <div class="mb-4">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#ff5a00]">Dados principais</p>
+                            <h3 class="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Atendimento</h3>
+                        </div>
+
+                        <dl class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434] sm:col-span-2 lg:col-span-3">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Cliente</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->cliente_nome }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Telefone</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->cliente_telefone }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Bairro</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->bairro }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Tipo</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Data</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->data_marcacao->format('d/m/Y') }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Turno</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? $ordem->turno ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Técnico</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->tecnico->nome ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Prioridade</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? $ordem->prioridade ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Status</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Atendente</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->atendente->name ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Criada em</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->created_at->format('d/m/Y H:i') }}</dd>
+                            </div>
+                        </dl>
+
+                        @if($ordem->observacao)
+                            <div class="mt-3 rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Observação</p>
+                                <p class="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">{{ $ordem->observacao }}</p>
+                            </div>
+                        @endif
+                    </section>
+
+                    <section class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-[#4a4a4a] dark:bg-[#2f2f2f]">
+                        <div class="mb-4">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#ff5a00]">Dados SGP</p>
+                            <h3 class="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">Cadastro</h3>
+                        </div>
+
+                        <dl class="grid gap-2 sm:grid-cols-2">
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434] sm:col-span-2">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Contrato SGP</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_contrato_id ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">CPF/CNPJ</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_cpf_cnpj ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Nascimento</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_data_nascimento?->format('d/m/Y') ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Plano</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_plano ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Vencimento</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_vencimento ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Ocorrência</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_ocorrencia_numero ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">OS SGP</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_os_numero ?? '-' }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">PPPoE</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_pppoe_login ?? '-' }} / {{ $ordem->sgp_pppoe_senha ?? '-' }}</dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-[#4a4a4a] dark:bg-[#2f2f2f]">
+                        <div class="mb-4">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#ff5a00]">Infraestrutura</p>
+                            <h3 class="mt-1 text-base font-semibold text-slate-900 dark:text-slate-100">CTO, porta e endereço</h3>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Sincronização SGP</p>
+                                <div class="mt-2">
+                                    @if($ordem->sgp_sync_status === 'sincronizado')
+                                        <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">Sincronizado</span>
+                                    @elseif($ordem->sgp_sync_status === 'erro')
+                                        <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800 dark:bg-red-950/40 dark:text-red-300">Erro</span>
+                                    @elseif($ordem->sgp_sync_status === 'ignorado')
+                                        <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Ignorado</span>
+                                    @else
+                                        <span class="text-sm text-slate-500 dark:text-slate-400">-</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">CTO / Porta</p>
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    @if($ctoInfo['has_cto'])
+                                        <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                            CTO: {{ $ctoInfo['cto'] }}
+                                        </span>
+                                        @if($ctoInfo['has_porta'])
+                                            <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
+                                                Porta: {{ $ctoInfo['porta'] }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                                                Porta: sem porta
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                                            Sem CTO
+                                        </span>
+                                        @if($ctoInfo['has_porta'])
+                                            <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
+                                                Porta: {{ $ctoInfo['porta'] }}
+                                            </span>
+                                        @endif
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Endereço SGP</p>
+                                <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->sgp_endereco ?? '-' }}</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>
-
-
