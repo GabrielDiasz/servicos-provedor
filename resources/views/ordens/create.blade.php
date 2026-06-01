@@ -23,7 +23,7 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Link do cliente no SGP</label>
                     <div class="flex gap-2">
                         <input type="url" name="sgp_cliente_link" id="sgp_cliente_link" value="{{ old('sgp_cliente_link') }}"
-                               placeholder="Cole o link da pÃ¡gina de cadastro do cliente no SGP"
+                               placeholder="Cole o link da página de cadastro do cliente no SGP"
                                class="app-field flex-1">
                         <button type="button" id="buscar-sgp"
                                 class="app-btn-secondary px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-60">
@@ -59,7 +59,7 @@
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Tipo de Serviço *</label>
                         <x-sgp-select
                                 name="tipo_servico"
-                                :options="\App\Models\OrdemServico::TIPOS"
+                                :options="$tipoOptions"
                                 :selected="old('tipo_servico')"
                                 placeholder="Selecione..."
                                 class="w-full"
@@ -72,7 +72,7 @@
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Turno *</label>
                         <x-sgp-select
                                 name="turno"
-                                :options="\App\Models\OrdemServico::TURNOS"
+                                :options="$turnoOptions"
                                 :selected="old('turno')"
                                 placeholder="Selecione..."
                                 class="w-full"
@@ -82,7 +82,7 @@
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Prioridade *</label>
                         <x-sgp-select
                                 name="prioridade"
-                                :options="\App\Models\OrdemServico::PRIORIDADES"
+                                :options="$prioridadeOptions"
                                 :selected="old('prioridade', 'normal')"
                                 placeholder="Selecione..."
                                 class="w-full"
@@ -90,7 +90,7 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data de MarcaÃ§Ã£o *</label>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data de Marcação *</label>
                         <input type="date" name="data_marcacao" value="{{ old('data_marcacao') }}"
                                class="app-field w-full"
                                required>
@@ -100,7 +100,7 @@
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Técnico</label>
                         <x-sgp-select
                                 name="tecnico_id"
-                                :options="$tecnicos->mapWithKeys(fn ($tecnico) => [$tecnico->id => $tecnico->nome])->all()"
+                                :options="$tecnicoOptions"
                                 :selected="old('tecnico_id')"
                                 placeholder="Sem técnico"
                                 class="w-full"
@@ -160,7 +160,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Cliente nÃ£o encontrado no SGP.');
+                    throw new Error(data.message || 'Cliente não encontrado no SGP.');
                 }
 
                 document.getElementById('cliente_nome').value = data.cliente_nome || '';
@@ -179,4 +179,3 @@
         });
     </script>
 </x-app-layout>
-

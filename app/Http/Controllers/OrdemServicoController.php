@@ -38,9 +38,6 @@ class OrdemServicoController extends Controller
                 'turno',
                 'prioridade',
                 'status',
-            ])
-            ->with([
-                'tecnico:id,nome,ativo',
             ]);
 
         if ($request->filled('status')) {
@@ -70,15 +67,35 @@ class OrdemServicoController extends Controller
 
         $tecnicos = $this->tecnicosAtivosOrdenados();
         $tecnicosDisponiveis = $this->tecnicosDisponiveisOrdenados();
+        $tecnicoFilterOptions = $tecnicos->pluck('nome', 'id')->all();
+        $tecnicoOptions = $tecnicosDisponiveis
+            ->mapWithKeys(fn ($tecnico) => [
+                $tecnico->id => $tecnico->nome.($tecnico->ativo ? '' : ' (Inativo)'),
+            ])
+            ->all();
 
-        return view('ordens.index', compact('ordens', 'tecnicos', 'tecnicosDisponiveis', 'dataMarcacao', 'resumoDia'));
+        return view('ordens.index', [
+            'ordens' => $ordens,
+            'dataMarcacao' => $dataMarcacao,
+            'resumoCards' => $this->resumoCards($resumoDia),
+            'tecnicoFilterOptions' => $tecnicoFilterOptions,
+            'tecnicoOptions' => $tecnicoOptions,
+            'tipoOptions' => OrdemServico::TIPOS,
+            'prioridadeOptions' => OrdemServico::PRIORIDADES,
+            'statusFilterOptions' => OrdemServico::STATUS,
+        ]);
     }
 
     public function create()
     {
-        $tecnicos = $this->tecnicosAtivosOrdenados();
+        $tecnicoOptions = $this->tecnicosAtivosOrdenados()->pluck('nome', 'id')->all();
 
-        return view('ordens.create', compact('tecnicos'));
+        return view('ordens.create', [
+            'tecnicoOptions' => $tecnicoOptions,
+            'tipoOptions' => OrdemServico::TIPOS,
+            'turnoOptions' => OrdemServico::TURNOS,
+            'prioridadeOptions' => OrdemServico::PRIORIDADES,
+        ]);
     }
 
     public function store(Request $request, SgpService $sgp)
@@ -118,9 +135,15 @@ class OrdemServicoController extends Controller
 
     public function edit(OrdemServico $ordem)
     {
-        $tecnicos = $this->tecnicosAtivosOrdenados();
+        $tecnicoOptions = $this->tecnicosAtivosOrdenados()->pluck('nome', 'id')->all();
 
-        return view('ordens.edit', compact('ordem', 'tecnicos'));
+        return view('ordens.edit', [
+            'ordem' => $ordem,
+            'tecnicoOptions' => $tecnicoOptions,
+            'tipoOptions' => OrdemServico::TIPOS,
+            'turnoOptions' => OrdemServico::TURNOS,
+            'prioridadeOptions' => OrdemServico::PRIORIDADES,
+        ]);
     }
 
     public function update(Request $request, OrdemServico $ordem, SgpService $sgp)
@@ -133,7 +156,7 @@ class OrdemServicoController extends Controller
             'tipo_servico' => 'required|in:'.implode(',', array_keys(OrdemServico::TIPOS)),
             'turno' => 'required|in:manha,tarde',
             'prioridade' => 'required|in:normal,alta,urgente',
-            'status' => 'required|in:'.implode(',', $this->statusPermitidosParaEdicao($ordem)),
+            'status' => 'required|in:'.implode(',', array_keys($ordem->editable_status_options)),
             'data_marcacao' => 'required|date',
             'tecnico_id' => 'nullable|exists:tecnicos,id',
             'observacao' => 'required_if:tipo_servico,upgrade|nullable|string|max:1000',
@@ -180,7 +203,7 @@ class OrdemServicoController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:'.implode(',', $this->statusPermitidosParaEdicao($ordem)),
+            'status' => 'required|in:'.implode(',', array_keys($ordem->editable_status_options)),
         ]);
 
         $ordem->update($validated);
@@ -297,17 +320,6 @@ class OrdemServicoController extends Controller
         return $sincronizacao;
     }
 
-    private function statusPermitidosParaEdicao(OrdemServico $ordem): array
-    {
-        $status = array_keys(OrdemServico::STATUS);
-
-        if ($ordem->status === 'passada') {
-            return $status;
-        }
-
-        return array_values(array_diff($status, ['passada']));
-    }
-
     private function ctoInfo(OrdemServico $ordem): array
     {
         $onu = data_get($ordem->sgp_dados ?? [], 'contratos.0.servicos.0.onu');
@@ -341,6 +353,27 @@ class OrdemServicoController extends Controller
             ->orderByDesc('ativo')
             ->orderBy('nome')
             ->get();
+    }
+
+    private function resumoCards(object $resumoDia): array
+    {
+        return [
+            [
+                'title' => 'Serviços no dia',
+                'value' => (int) ($resumoDia->total ?? 0),
+                'tone' => 'blue',
+            ],
+            [
+                'title' => 'Serviços passados',
+                'value' => (int) ($resumoDia->total_passadas ?? 0),
+                'tone' => 'amber',
+            ],
+            [
+                'title' => 'Serviços concluídos',
+                'value' => (int) ($resumoDia->total_concluidas ?? 0),
+                'tone' => 'emerald',
+            ],
+        ];
     }
 
     public function destroy(OrdemServico $ordem)

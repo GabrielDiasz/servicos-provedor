@@ -7,7 +7,7 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                @if($ordem->tecnico_id)
+                @if ($ordem->canSendWhatsapp())
                     <form method="POST" action="{{ route('ordens.enviar-whatsapp', $ordem) }}" x-on:submit="$dispatch('busy-start', { label: 'Enviando WhatsApp...' })">
                         @csrf
                         <button type="submit"
@@ -21,12 +21,10 @@
                     </form>
                 @endif
 
-                <a href="{{ route('ordens.edit', $ordem) }}"
-                   class="app-btn-primary h-9 px-4 py-0">
+                <a href="{{ route('ordens.edit', $ordem) }}" class="app-btn-primary h-9 px-4 py-0">
                     Editar
                 </a>
-                <a href="{{ route('ordens.index') }}"
-                   class="app-btn-secondary h-9 px-4 py-0">
+                <a href="{{ route('ordens.index') }}" class="app-btn-secondary h-9 px-4 py-0">
                     Voltar
                 </a>
             </div>
@@ -46,13 +44,13 @@
                                 {{ $ordem->bairro }}
                             </span>
                             <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {{ $ordem->data_marcacao->format('d/m/Y') }} · {{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? $ordem->turno ?? '-' }}
+                                {{ $ordem->data_marcacao->format('d/m/Y') }} · {{ $ordem->turno_label }}
                             </span>
                             <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status ?? '-' }}
+                                {{ $ordem->status_label }}
                             </span>
                             <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? $ordem->prioridade ?? '-' }}
+                                {{ $ordem->prioridade_label }}
                             </span>
                         </div>
 
@@ -92,7 +90,7 @@
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Tipo</dt>
-                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico ?? '-' }}</dd>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->tipo_servico_label }}</dd>
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Data</dt>
@@ -100,7 +98,7 @@
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Turno</dt>
-                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::TURNOS[$ordem->turno] ?? $ordem->turno ?? '-' }}</dd>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->turno_label }}</dd>
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Técnico</dt>
@@ -108,11 +106,11 @@
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Prioridade</dt>
-                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::PRIORIDADES[$ordem->prioridade] ?? $ordem->prioridade ?? '-' }}</dd>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->prioridade_label }}</dd>
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Status</dt>
-                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status ?? '-' }}</dd>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $ordem->status_label }}</dd>
                             </div>
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Atendente</dt>
@@ -124,7 +122,7 @@
                             </div>
                         </dl>
 
-                        @if($ordem->observacao)
+                        @if ($ordem->observacao)
                             <div class="mt-3 rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Observação</p>
                                 <p class="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">{{ $ordem->observacao }}</p>
@@ -184,11 +182,11 @@
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Sincronização SGP</p>
                                 <div class="mt-2">
-                                    @if($ordem->sgp_sync_status === 'sincronizado')
+                                    @if ($ordem->sgp_sync_status === 'sincronizado')
                                         <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">Sincronizado</span>
-                                    @elseif($ordem->sgp_sync_status === 'erro')
+                                    @elseif ($ordem->sgp_sync_status === 'erro')
                                         <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800 dark:bg-red-950/40 dark:text-red-300">Erro</span>
-                                    @elseif($ordem->sgp_sync_status === 'ignorado')
+                                    @elseif ($ordem->sgp_sync_status === 'ignorado')
                                         <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Ignorado</span>
                                     @else
                                         <span class="text-sm text-slate-500 dark:text-slate-400">-</span>
@@ -199,11 +197,11 @@
                             <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
                                 <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">CTO / Porta</p>
                                 <div class="mt-2 flex flex-wrap items-center gap-2">
-                                    @if($ctoInfo['has_cto'])
+                                    @if ($ctoInfo['has_cto'])
                                         <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
                                             CTO: {{ $ctoInfo['cto'] }}
                                         </span>
-                                        @if($ctoInfo['has_porta'])
+                                        @if ($ctoInfo['has_porta'])
                                             <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
                                                 Porta: {{ $ctoInfo['porta'] }}
                                             </span>
@@ -216,7 +214,7 @@
                                         <span class="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
                                             Sem CTO
                                         </span>
-                                        @if($ctoInfo['has_porta'])
+                                        @if ($ctoInfo['has_porta'])
                                             <span class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300">
                                                 Porta: {{ $ctoInfo['porta'] }}
                                             </span>
