@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\OrdemServico;
 use App\Models\Tecnico;
+use App\Models\WhatsAppGrupo;
 use App\Models\User;
 use App\Services\SgpService;
 use App\Services\WhatsAppService;
@@ -11,6 +12,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
 
@@ -171,6 +173,95 @@ class OrdemServicoTelefoneTest extends TestCase
         ]);
     }
 
+    public function test_enviar_whatsapp_envia_a_imagem_do_endereco_antes_das_mensagens_textuais(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $grupo = WhatsAppGrupo::create([
+            'nome' => 'Grupo Tecnicos',
+            'grupo_id' => '12345-67890@g.us',
+            'ativo' => true,
+        ]);
+
+        $tecnico = Tecnico::create([
+            'nome' => 'Tecnico Teste',
+            'telefone' => '73900000000',
+            'ativo' => true,
+            'whatsapp_grupo_id' => $grupo->id,
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Final',
+            'cliente_telefone' => '73999999999',
+            'bairro' => 'Tapera',
+            'tipo_servico' => 'instalacao',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => $tecnico->id,
+            'user_id' => $user->id,
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+            'sgp_pppoe_login' => '2020',
+            'sgp_pppoe_senha' => 'senha',
+            'sgp_dados' => [
+                'contratos' => [[
+                    'servicos' => [[
+                        'endereco' => [
+                            'logradouro' => 'RUA EXEMPLO',
+                            'numero' => '10',
+                            'bairro' => 'CENTRO',
+                        ],
+                    ]],
+                ]],
+            ],
+        ]);
+
+        config([
+            'services.sgp.url' => 'https://sgp.exemplo',
+            'services.sgp.web_username' => 'usuario-teste',
+            'services.sgp.web_password' => 'senha-teste',
+        ]);
+
+        Http::fake([
+            '*send-sgp-address*' => Http::response(['sent' => true], 200),
+            '*send-message*' => Http::response(['sent' => true], 200),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('ordens.enviar-whatsapp', $ordem))
+            ->assertRedirect();
+
+        Http::assertSentCount(5);
+        Http::assertSentInOrder([
+            fn ($request) => str_contains($request->url(), '/send-sgp-address')
+                && $request['group_id'] === $grupo->grupo_id
+                && $request['base_url'] === 'https://sgp.exemplo'
+                && str_contains($request['cliente_url'], '/admin/cliente/5151/edit/')
+                && $request['username'] === 'usuario-teste'
+                && $request['password'] === 'senha-teste'
+                && str_contains($request['caption'], 'INSTALA')
+                && ! str_contains($request['caption'], ' - '),
+            fn ($request) => str_contains($request->url(), '/send-message')
+                && str_contains($request['message'], 'Titular: Cliente Final'),
+            fn ($request) => str_contains($request->url(), '/send-message')
+                && str_contains($request['message'], '2020'),
+            fn ($request) => str_contains($request->url(), '/send-message')
+                && str_contains($request['message'], 'senha'),
+            fn ($request) => str_contains($request->url(), '/send-message')
+                && str_contains($request['message'], '73999999999'),
+        ]);
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'status' => 'passada',
+        ]);
+    }
+
     public function test_store_exige_observacao_quando_o_tipo_e_upgrade(): void
     {
         $user = User::factory()->create([
@@ -291,6 +382,16 @@ class OrdemServicoTelefoneTest extends TestCase
             'tecnicos' => Collection::make(),
             'tecnicosDisponiveis' => Collection::make(),
             'dataMarcacao' => now()->toDateString(),
+            'statusFilterOptions' => OrdemServico::STATUS,
+            'tecnicoFilterOptions' => [],
+            'tecnicoOptions' => [],
+            'tipoOptions' => OrdemServico::TIPOS,
+            'prioridadeOptions' => OrdemServico::PRIORIDADES,
+            'resumoCards' => [
+                ['title' => 'Serviços no dia', 'value' => 1, 'tone' => 'blue'],
+                ['title' => 'Serviços passados', 'value' => 0, 'tone' => 'amber'],
+                ['title' => 'Serviços concluídos', 'value' => 0, 'tone' => 'emerald'],
+            ],
         ])->render();
 
         $this->assertStringContainsString('href="https://seu-sgp.exemplo/admin/cliente/5151/edit/"', $html);

@@ -40,7 +40,9 @@ return [
         'url' => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3000'),
         'token' => env('WHATSAPP_TOKEN'),
         'timeout' => env('WHATSAPP_TIMEOUT', 10),
+        'image_timeout' => env('WHATSAPP_IMAGE_TIMEOUT', 120),
         'connect_timeout' => env('WHATSAPP_CONNECT_TIMEOUT', 3),
+        'chrome_path' => env('CHROME_PATH'),
     ],
 
     'sgp' => [

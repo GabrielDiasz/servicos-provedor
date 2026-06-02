@@ -91,12 +91,17 @@ O serviço expõe, por padrão:
 - `http://127.0.0.1:3000/status`
 - `http://127.0.0.1:3000/groups`
 - `http://127.0.0.1:3000/send-message`
+- `http://127.0.0.1:3000/send-media`
 
 Se você definir `WHATSAPP_TOKEN`, o microserviço exige autenticação Bearer nas requisições.
+
+O envio do print do endereço reaproveita o `Puppeteer` que já vem com a árvore de dependências atual do `whatsapp-web.js`, então não é preciso instalar pacote novo para essa funcionalidade.
 
 ## SGP
 
 A integração com o SGP é feita por login web autenticado e depende das credenciais configuradas em `SGP_WEB_USERNAME` e `SGP_WEB_PASSWORD`.
+
+A captura do print do endereço usa essas mesmas credenciais e o navegador local definido em `CHROME_PATH` quando ele estiver configurado.
 
 ## Execução local
 

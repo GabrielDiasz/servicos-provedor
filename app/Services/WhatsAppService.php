@@ -26,6 +26,10 @@ class WhatsAppService
         }
 
         try {
+            if (! $this->enviarImagemEndereco($ordem)) {
+                return false;
+            }
+
             foreach ($this->mensagensOrdemServico($ordem) as $mensagem) {
                 $response = Http::timeout(config('services.whatsapp.timeout', 10))
                     ->connectTimeout(config('services.whatsapp.connect_timeout', 3))
@@ -70,17 +74,15 @@ class WhatsAppService
 
         if (in_array($ordem->tipo_servico, $servicosCompletos, true)) {
             return collect([
-                $this->mensagemServicoEndereco($ordem, $tipo, $observacao),
+                $this->mensagemDadosCliente($ordem),
                 $login,
                 $ordem->sgp_pppoe_senha,
-                $this->mensagemDadosCliente($ordem),
                 in_array($ordem->tipo_servico, $servicosComCtoPorta, true) ? $mensagemCtoPorta : null,
                 $this->telefonePrincipal($ordem),
             ])->filter()->values()->all();
         }
 
         return collect([
-            $this->mensagemServicoEndereco($ordem, $tipo, $observacao),
             $login,
             $ordem->sgp_pppoe_senha,
             $this->mensagemCtoPorta($ordem),
@@ -281,6 +283,85 @@ class WhatsAppService
         return data_get($dados, 'contratos.0.servicos.0.endereco')
             ?? data_get($dados, 'contratos.0.endereco')
             ?? data_get($dados, 'endereco');
+    }
+
+    private function enviarImagemEndereco(OrdemServico $ordem): bool
+    {
+        if (! config('services.sgp.enabled')) {
+            return false;
+        }
+
+        if (! config('services.sgp.web_username') || ! config('services.sgp.web_password')) {
+            Log::warning('Nao foi possivel capturar a imagem do endereco porque as credenciais web do SGP nao estao configuradas.', [
+                'ordem_id' => $ordem->id,
+            ]);
+
+            return false;
+        }
+
+        $clienteUrl = $this->urlClienteSgpParaCaptura($ordem);
+
+        if (! $clienteUrl) {
+            Log::warning('Nao foi possivel capturar a imagem do endereco porque a OS nao possui link nem ID de cliente do SGP.', [
+                'ordem_id' => $ordem->id,
+            ]);
+
+            return false;
+        }
+
+        try {
+            $caption = $this->linhaInicialServico(
+                $ordem,
+                OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico,
+                $this->observacaoMensagem($ordem, OrdemServico::TIPOS[$ordem->tipo_servico] ?? $ordem->tipo_servico)
+            );
+
+            $response = Http::timeout(config('services.whatsapp.image_timeout', 120))
+                ->connectTimeout(config('services.whatsapp.connect_timeout', 3))
+                ->when(config('services.whatsapp.token'), fn ($http, $token) => $http->withToken($token))
+                ->post(rtrim(config('services.whatsapp.url'), '/').'/send-sgp-address', [
+                    'group_id' => $ordem->tecnico->whatsappGrupo->grupo_id,
+                    'base_url' => config('services.sgp.url'),
+                    'cliente_url' => $clienteUrl,
+                    'username' => config('services.sgp.web_username'),
+                    'password' => config('services.sgp.web_password'),
+                    'caption' => $caption,
+                ]);
+
+            if ($response->failed()) {
+                Log::warning('Falha ao gerar ou enviar a imagem do endereco pelo WhatsApp.', [
+                    'ordem_id' => $ordem->id,
+                    'tecnico_id' => $ordem->tecnico_id,
+                    'status' => $response->status(),
+                    'resposta' => $response->json() ?: $response->body(),
+                ]);
+
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::warning('Falha ao gerar ou enviar a imagem do endereco pelo WhatsApp.', [
+                'ordem_id' => $ordem->id,
+                'tecnico_id' => $ordem->tecnico_id,
+                'erro' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    private function urlClienteSgpParaCaptura(OrdemServico $ordem): ?string
+    {
+        if (filled($ordem->sgp_cliente_link)) {
+            return $ordem->sgp_cliente_link;
+        }
+
+        if (filled($ordem->sgp_cliente_id)) {
+            return rtrim((string) config('services.sgp.url'), '/').'/admin/cliente/'.trim((string) $ordem->sgp_cliente_id).'/edit/';
+        }
+
+        return null;
     }
 
     private function onuSgp(OrdemServico $ordem): ?array

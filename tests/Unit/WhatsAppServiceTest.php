@@ -70,8 +70,8 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('TROCA DE SENHA'."\n", $mensagens[0]);
-        $this->assertStringNotContainsString(' - troca de senha', $mensagens[0]);
+        $this->assertSame('2020', $mensagens[0]);
+        $this->assertSame('senha', $mensagens[1]);
     }
 
     public function test_mensagem_mantem_observacao_quando_ela_traz_informacao_diferente(): void
@@ -102,7 +102,8 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringContainsString('TROCA DE SENHA - cliente pediu nova senha', $mensagens[0]);
+        $this->assertSame('2020', $mensagens[0]);
+        $this->assertSame('senha', $mensagens[1]);
     }
 
     public function test_instalacao_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
@@ -133,8 +134,8 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('INSTALAÇÃO'."\n", $mensagens[0]);
-        $this->assertStringNotContainsString(' - ', $mensagens[0]);
+        $this->assertStringStartsWith('Titular:', $mensagens[0]);
+
     }
 
     public function test_reativacao_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
@@ -165,8 +166,8 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('REATIVAÇÃO'."\n", $mensagens[0]);
-        $this->assertStringNotContainsString(' - ', $mensagens[0]);
+        $this->assertStringStartsWith('Titular:', $mensagens[0]);
+
     }
 
     public function test_desconectado_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
@@ -197,8 +198,8 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('DESCONECTADO'."\n", $mensagens[0]);
-        $this->assertStringNotContainsString(' - ', $mensagens[0]);
+        $this->assertSame('2020', $mensagens[0]);
+
     }
 
     public function test_mudanca_de_endereco_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
@@ -235,8 +236,8 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('MUDANÇA DE ENDEREÇO'."\n", $mensagens[0]);
-        $this->assertStringNotContainsString(' - ', $mensagens[0]);
+        $this->assertStringStartsWith('Titular:', $mensagens[0]);
+
         $this->assertTrue(in_array('CTO: CA 13 Porta: 8', $mensagens, true));
     }
 
@@ -268,7 +269,7 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('REPARO - OSCILAÇÃO'."\n", $mensagens[0]);
+        $this->assertSame('2020', $mensagens[0]);
     }
 
     public function test_troca_de_senha_sem_observacao_usa_o_nome_do_servico_na_primeira_linha(): void
@@ -299,7 +300,7 @@ class WhatsAppServiceTest extends TestCase
 
         $mensagens = $method->invoke($service, $ordem);
 
-        $this->assertStringStartsWith('TROCA DE SENHA'."\n", $mensagens[0]);
-        $this->assertStringNotContainsString(' - ', $mensagens[0]);
+        $this->assertSame('2020', $mensagens[0]);
+
     }
 }
