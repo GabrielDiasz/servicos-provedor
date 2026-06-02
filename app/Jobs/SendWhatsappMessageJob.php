@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -29,12 +30,23 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
         public int $ordemId,
         public ?string $usuarioResponsavel = null,
         public ?string $usuarioEmail = null,
+        public ?int $tecnicoIdSnapshot = null,
     ) {
     }
 
     public function backoff(): array
     {
         return [5, 10, 30];
+    }
+
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping('ordem-flow:'.$this->ordemId))
+                ->shared()
+                ->releaseAfter(10)
+                ->expireAfter(900),
+        ];
     }
 
     public function uniqueId(): string
@@ -47,6 +59,23 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
         $ordem = OrdemServico::query()
             ->with(['tecnico.whatsappGrupo', 'atendente'])
             ->findOrFail($this->ordemId);
+
+        if ($this->tecnicoIdSnapshot !== null) {
+            $tecnicoSnapshot = $ordem->tecnico?->id === $this->tecnicoIdSnapshot
+                ? $ordem->tecnico
+                : null;
+
+            if (! $tecnicoSnapshot) {
+                $tecnicoSnapshot = \App\Models\Tecnico::query()
+                    ->with('whatsappGrupo')
+                    ->find($this->tecnicoIdSnapshot);
+            }
+
+            if ($tecnicoSnapshot) {
+                $ordem->setRelation('tecnico', $tecnicoSnapshot);
+                $ordem->tecnico_id = $tecnicoSnapshot->id;
+            }
+        }
 
         Log::info('Iniciando job de envio de WhatsApp.', [
             'ordem_id' => $ordem->id,
@@ -210,6 +239,7 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
             'cliente_id' => $ordem->sgp_cliente_id,
             'cliente_nome' => $ordem->cliente_nome,
             'tecnico_id' => $ordem->tecnico_id,
+            'sgp_ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
             'whatsapp_send_status' => $ordem->whatsapp_send_status,
             'sgp_ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
             'status' => $ordem->status,

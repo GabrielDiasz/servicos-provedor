@@ -20,7 +20,7 @@ class OrdemServicoTelefoneTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_store_preserva_o_telefone_editado_manualmente_em_vez_do_telefone_do_sgp(): void
+    public function test_store_nao_dispara_sgp_ou_whatsapp_automaticamente(): void
     {
         $user = User::factory()->create([
             'perfil' => 'admin',
@@ -53,7 +53,7 @@ class OrdemServicoTelefoneTest extends TestCase
             ])
             ->assertRedirect(route('ordens.index'));
 
-        Bus::assertDispatched(CreateSgpOccurrenceJob::class);
+        Bus::assertNotDispatched(CreateSgpOccurrenceJob::class);
         Bus::assertNotDispatched(SendWhatsappMessageJob::class);
 
         $this->assertDatabaseHas('ordens_servico', [
@@ -63,7 +63,7 @@ class OrdemServicoTelefoneTest extends TestCase
             'sgp_cliente_id' => null,
             'sgp_ocorrencia_numero' => null,
             'sgp_os_numero' => null,
-            'sgp_sync_status' => 'queued',
+            'sgp_sync_status' => null,
             'whatsapp_send_status' => null,
         ]);
     }
@@ -153,6 +153,66 @@ class OrdemServicoTelefoneTest extends TestCase
             'sgp_ocorrencia_numero' => null,
             'sgp_os_numero' => null,
             'whatsapp_send_status' => 'queued',
+        ]);
+    }
+
+    public function test_enviar_whatsapp_sem_checkbox_reagenda_envio_mesmo_quando_a_mesma_ocorrencia_ja_foi_enviada(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $grupo = WhatsAppGrupo::create([
+            'nome' => 'Grupo Tecnicos',
+            'grupo_id' => '12345-67890@g.us',
+            'ativo' => true,
+        ]);
+
+        $tecnico = Tecnico::create([
+            'nome' => 'Tecnico Teste',
+            'telefone' => '73900000000',
+            'ativo' => true,
+            'whatsapp_grupo_id' => $grupo->id,
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Final',
+            'cliente_telefone' => '73999999999',
+            'bairro' => 'Tapera',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => $tecnico->id,
+            'user_id' => $user->id,
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+            'sgp_ocorrencia_numero' => '260602114300',
+            'whatsapp_sent_at' => now()->subMinutes(15),
+            'whatsapp_sent_for_sgp_ocorrencia_numero' => '260602114300',
+            'whatsapp_send_status' => 'sent',
+        ]);
+
+        Bus::fake();
+
+        $this->actingAs($user)
+            ->post(route('ordens.enviar-whatsapp', $ordem), [
+                'abrir_ocorrencia_sgp' => '0',
+            ])
+            ->assertRedirect();
+
+        Bus::assertDispatched(SendWhatsappMessageJob::class, function (SendWhatsappMessageJob $job) use ($ordem, $tecnico) {
+            return $job->ordemId === $ordem->id
+                && $job->tecnicoIdSnapshot === $tecnico->id;
+        });
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'whatsapp_send_status' => 'queued',
+            'whatsapp_sent_at' => null,
+            'whatsapp_sent_for_sgp_ocorrencia_numero' => null,
         ]);
     }
 

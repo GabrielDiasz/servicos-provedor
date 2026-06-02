@@ -163,6 +163,7 @@ class SgpService
             return [
                 'status' => 'synced',
                 'message' => 'Ocorrência e OS criadas no SGP com sucesso.',
+                'ocorrencia_sgp_id' => $ocorrenciaId,
                 'ocorrencia_numero' => $numeroOcorrencia,
                 'os_numero' => $osNumero,
             ];

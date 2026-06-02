@@ -118,26 +118,19 @@ class OrdemServicoController extends Controller
 
         $validated['user_id'] = Auth::id();
         $validated['status'] = 'pendente';
-        $validated['sgp_sync_status'] = 'queued';
-        $validated['sgp_sync_error'] = null;
         $validated['whatsapp_send_status'] = null;
         $validated['whatsapp_send_error'] = null;
         $validated['whatsapp_sent_at'] = null;
+        $validated['whatsapp_sent_for_sgp_ocorrencia_numero'] = null;
+        $validated['sgp_sync_status'] = null;
+        $validated['sgp_sync_error'] = null;
         $validated['sgp_ocorrencia_sgp_id'] = null;
 
         $ordem = OrdemServico::create($validated);
 
-        CreateSgpOccurrenceJob::dispatch(
-            $ordem->id,
-            Auth::user()?->name,
-            Auth::user()?->email,
-            true,
-            $ordem->tecnico_id
-        )->afterCommit();
-
         $payload = [
             'success' => true,
-            'message' => 'Ocorrência criada com sucesso e está sendo processada.',
+            'message' => 'Ocorrência criada com sucesso.',
             'ordem_id' => $ordem->id,
         ];
 
@@ -219,12 +212,15 @@ class OrdemServicoController extends Controller
             $ordem->forceFill([
                 'whatsapp_send_status' => 'queued',
                 'whatsapp_send_error' => null,
+                'whatsapp_sent_at' => null,
+                'whatsapp_sent_for_sgp_ocorrencia_numero' => null,
             ])->save();
 
             SendWhatsappMessageJob::dispatch(
                 $ordem->id,
                 Auth::user()?->name,
-                Auth::user()?->email
+                Auth::user()?->email,
+                $ordem->tecnico_id
             )->afterCommit();
 
             $message = 'Envio do WhatsApp enfileirado com sucesso.';

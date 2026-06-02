@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -37,6 +38,16 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
     public function backoff(): array
     {
         return [5, 10, 30];
+    }
+
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping('ordem-flow:'.$this->ordemId))
+                ->shared()
+                ->releaseAfter(10)
+                ->expireAfter(900),
+        ];
     }
 
     public function uniqueId(): string
@@ -89,7 +100,8 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 SendWhatsappMessageJob::dispatch(
                     $ordem->id,
                     $this->usuarioResponsavel,
-                    $this->usuarioEmail
+                    $this->usuarioEmail,
+                    $this->tecnicoIdSnapshot
                 );
             }
 
@@ -133,6 +145,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             }
 
             $ordem->forceFill([
+                'sgp_ocorrencia_sgp_id' => $resultado['ocorrencia_sgp_id'] ?? $ordem->sgp_ocorrencia_sgp_id,
                 'sgp_ocorrencia_numero' => $resultado['ocorrencia_numero'] ?? $ordem->sgp_ocorrencia_numero,
                 'sgp_os_numero' => $resultado['os_numero'] ?? $ordem->sgp_os_numero,
                 'sgp_sync_status' => 'sincronizado',
@@ -143,8 +156,8 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 'ordem_id' => $ordem->id,
                 'cliente_id' => $ordem->sgp_cliente_id,
                 'status_sgp' => $ordem->sgp_sync_status,
-                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
                 'ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
+                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
                 'os_numero' => $ordem->sgp_os_numero,
                 'payload' => $this->contextoOrdem($ordem),
             ]);
@@ -158,7 +171,8 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 SendWhatsappMessageJob::dispatch(
                     $ordem->id,
                     $this->usuarioResponsavel,
-                    $this->usuarioEmail
+                    $this->usuarioEmail,
+                    $this->tecnicoIdSnapshot
                 );
             }
         } catch (Throwable $exception) {
@@ -182,8 +196,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
     private function ordemJaSincronizada(OrdemServico $ordem): bool
     {
         return $ordem->sgp_sync_status === 'sincronizado'
-            && filled($ordem->sgp_ocorrencia_numero)
-            && filled($ordem->sgp_os_numero);
+            && filled($ordem->sgp_ocorrencia_numero);
     }
 
     private function garantirDadosSgpLocalmente(OrdemServico $ordem, SgpService $sgp): void
@@ -224,6 +237,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             'cliente_nome' => $ordem->cliente_nome,
             'tecnico_id' => $ordem->tecnico_id,
             'tecnico_id_snapshot' => $this->tecnicoIdSnapshot,
+            'sgp_ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
             'sgp_cliente_link' => $ordem->sgp_cliente_link,
             'tipo_servico' => $ordem->tipo_servico,
             'status' => $ordem->status,

@@ -69,6 +69,7 @@ class QueueJobsTest extends TestCase
             ->once()
             ->andReturn([
                 'status' => 'synced',
+                'ocorrencia_sgp_id' => '987654321',
                 'ocorrencia_numero' => '260528999999',
                 'os_numero' => '14147',
             ]);
@@ -84,6 +85,7 @@ class QueueJobsTest extends TestCase
             'id' => $ordem->id,
             'sgp_cliente_id' => 5151,
             'sgp_contrato_id' => 5151,
+            'sgp_ocorrencia_sgp_id' => '987654321',
             'sgp_ocorrencia_numero' => '260528999999',
             'sgp_os_numero' => '14147',
             'sgp_sync_status' => 'sincronizado',
@@ -147,6 +149,7 @@ class QueueJobsTest extends TestCase
             }), $user->name, $user->email)
             ->andReturn([
                 'status' => 'synced',
+                'ocorrencia_sgp_id' => '987654322',
                 'ocorrencia_numero' => '260528999998',
                 'os_numero' => '14148',
             ]);
@@ -163,6 +166,7 @@ class QueueJobsTest extends TestCase
             'id' => $ordem->id,
             'sgp_cliente_id' => 5151,
             'sgp_contrato_id' => 5151,
+            'sgp_ocorrencia_sgp_id' => '987654322',
             'sgp_ocorrencia_numero' => '260528999998',
             'sgp_os_numero' => '14148',
             'sgp_sync_status' => 'sincronizado',
@@ -301,6 +305,142 @@ class QueueJobsTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/send-sgp-address'));
         Http::assertSent(fn ($request) => str_contains($request->url(), '/send-message'));
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'status' => 'passada',
+            'whatsapp_send_status' => 'sent',
+            'whatsapp_sent_for_sgp_ocorrencia_numero' => '260602114300',
+        ]);
+    }
+
+    public function test_create_sgp_job_nao_recria_ocorrencia_quando_a_os_ja_tem_numero_sgp_mesmo_sem_os(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $tecnico = Tecnico::create([
+            'nome' => 'Vanderley',
+            'telefone' => '73900000001',
+            'ativo' => true,
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Final',
+            'cliente_telefone' => '73999999999',
+            'sgp_cliente_link' => 'https://seu-sgp.exemplo/admin/cliente/5151/edit/',
+            'bairro' => 'Tapera',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => $tecnico->id,
+            'user_id' => $user->id,
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+            'sgp_ocorrencia_numero' => '260602140200',
+            'sgp_os_numero' => null,
+            'sgp_sync_status' => 'sincronizado',
+        ]);
+
+        $sgp = Mockery::mock(SgpService::class);
+        $sgp->shouldNotReceive('sincronizarOcorrenciaEOrdemServico');
+
+        $job = new CreateSgpOccurrenceJob($ordem->id, $user->name, $user->email, true, $tecnico->id);
+        $job->handle($sgp);
+
+        Bus::assertDispatched(SendWhatsappMessageJob::class, function (SendWhatsappMessageJob $queuedJob) use ($ordem, $tecnico) {
+            return $queuedJob->ordemId === $ordem->id
+                && $queuedJob->tecnicoIdSnapshot === $tecnico->id;
+        });
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'sgp_ocorrencia_numero' => '260602140200',
+            'sgp_os_numero' => null,
+            'sgp_sync_status' => 'sincronizado',
+        ]);
+    }
+
+    public function test_send_whatsapp_job_usa_o_tecnico_snapshot_mesmo_se_a_os_mudar_antes_da_execucao(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $grupoJhon = WhatsAppGrupo::create([
+            'nome' => 'Grupo Jhon',
+            'grupo_id' => '11111-11111@g.us',
+            'ativo' => true,
+        ]);
+
+        $grupoVanderley = WhatsAppGrupo::create([
+            'nome' => 'Grupo Vanderley',
+            'grupo_id' => '22222-22222@g.us',
+            'ativo' => true,
+        ]);
+
+        $tecnicoJhon = Tecnico::create([
+            'nome' => 'Jhon',
+            'telefone' => '73900000000',
+            'ativo' => true,
+            'whatsapp_grupo_id' => $grupoJhon->id,
+        ]);
+
+        $tecnicoVanderley = Tecnico::create([
+            'nome' => 'Vanderley',
+            'telefone' => '73900000001',
+            'ativo' => true,
+            'whatsapp_grupo_id' => $grupoVanderley->id,
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Final',
+            'cliente_telefone' => '73999999999',
+            'bairro' => 'Tapera',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => $tecnicoJhon->id,
+            'user_id' => $user->id,
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+            'sgp_pppoe_login' => '2020',
+            'sgp_pppoe_senha' => 'senha',
+            'sgp_ocorrencia_numero' => '260602114300',
+            'sgp_sync_status' => 'sincronizado',
+        ]);
+
+        $ordem->update([
+            'tecnico_id' => $tecnicoVanderley->id,
+        ]);
+
+        config([
+            'services.sgp.url' => 'https://sgp.exemplo',
+            'services.sgp.web_username' => 'usuario-teste',
+            'services.sgp.web_password' => 'senha-teste',
+        ]);
+
+        Http::fake([
+            '*send-sgp-address*' => Http::response(['sent' => true], 200),
+            '*send-message*' => Http::response(['sent' => true], 200),
+        ]);
+
+        $job = new SendWhatsappMessageJob($ordem->id, $user->name, $user->email, $tecnicoJhon->id);
+        $job->handle(app(WhatsAppService::class), app(SgpService::class));
+
+        Http::assertSent(function ($request) use ($grupoJhon) {
+            return str_contains($request->url(), '/send-message')
+                && ($request->data()['group_id'] ?? null) === $grupoJhon->grupo_id;
+        });
 
         $this->assertDatabaseHas('ordens_servico', [
             'id' => $ordem->id,
