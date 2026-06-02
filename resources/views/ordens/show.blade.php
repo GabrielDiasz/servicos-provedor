@@ -61,7 +61,7 @@
                             <span class="hidden xl:inline">•</span>
                             <span class="hidden xl:inline">Sincronização SGP:
                                 <strong class="text-slate-900 dark:text-slate-100">
-                                    {{ \Illuminate\Support\Str::headline($ordem->sgp_sync_status ?? '-') }}
+                                    {{ $ordem->sgp_sync_status_label }}
                                 </strong>
                             </span>
                         </div>
@@ -184,12 +184,46 @@
                                 <div class="mt-2">
                                     @if ($ordem->sgp_sync_status === 'sincronizado')
                                         <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">Sincronizado</span>
+                                    @elseif ($ordem->sgp_sync_status === 'processando')
+                                        <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800 dark:bg-sky-950/40 dark:text-sky-300">Processando</span>
+                                    @elseif ($ordem->sgp_sync_status === 'queued')
+                                        <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Na fila</span>
                                     @elseif ($ordem->sgp_sync_status === 'erro')
                                         <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800 dark:bg-red-950/40 dark:text-red-300">Erro</span>
                                     @elseif ($ordem->sgp_sync_status === 'ignorado')
                                         <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Ignorado</span>
                                     @else
                                         <span class="text-sm text-slate-500 dark:text-slate-400">-</span>
+                                    @endif
+                                    @if ($ordem->sgp_sync_error)
+                                        <p class="mt-2 text-xs text-red-600 dark:text-red-300">{{ $ordem->sgp_sync_error }}</p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-[#505050] dark:bg-[#343434]">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Envio WhatsApp</p>
+                                <div class="mt-2">
+                                    @if ($ordem->whatsapp_send_status === 'sent')
+                                        <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">Enviado</span>
+                                    @elseif ($ordem->whatsapp_send_status === 'processando')
+                                        <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800 dark:bg-sky-950/40 dark:text-sky-300">Processando</span>
+                                    @elseif ($ordem->whatsapp_send_status === 'queued')
+                                        <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Na fila</span>
+                                    @elseif ($ordem->whatsapp_send_status === 'erro')
+                                        <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800 dark:bg-red-950/40 dark:text-red-300">Erro</span>
+                                    @elseif ($ordem->whatsapp_send_status === 'ignorado')
+                                        <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">Ignorado</span>
+                                    @else
+                                        <span class="text-sm text-slate-500 dark:text-slate-400">-</span>
+                                    @endif
+
+                                    @if ($ordem->whatsapp_sent_at)
+                                        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Em {{ $ordem->whatsapp_sent_at->format('d/m/Y H:i') }}</p>
+                                    @endif
+
+                                    @if ($ordem->whatsapp_send_error)
+                                        <p class="mt-2 text-xs text-red-600 dark:text-red-300">{{ $ordem->whatsapp_send_error }}</p>
                                     @endif
                                 </div>
                             </div>

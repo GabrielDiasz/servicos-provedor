@@ -86,6 +86,10 @@ class OrdemServico extends Model
         'sgp_os_numero',
         'sgp_sync_status',
         'sgp_sync_error',
+        'whatsapp_send_status',
+        'whatsapp_send_error',
+        'whatsapp_sent_at',
+        'whatsapp_sent_for_sgp_ocorrencia_numero',
         'bairro',
         'tipo_servico',
         'turno',
@@ -101,6 +105,7 @@ class OrdemServico extends Model
         'data_marcacao' => 'date',
         'sgp_data_nascimento' => 'date',
         'sgp_dados' => 'array',
+        'whatsapp_sent_at' => 'datetime',
     ];
 
     // Labels para exibição na tela
@@ -193,6 +198,30 @@ class OrdemServico extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS[$this->status] ?? ($this->status ?: '-');
+    }
+
+    public function getSgpSyncStatusLabelAttribute(): string
+    {
+        return match ($this->sgp_sync_status) {
+            'queued' => 'Na fila',
+            'processando' => 'Processando',
+            'sincronizado' => 'Sincronizado',
+            'erro' => 'Erro',
+            'ignorado' => 'Ignorado',
+            default => $this->sgp_sync_status ?: '-',
+        };
+    }
+
+    public function getWhatsappSendStatusLabelAttribute(): string
+    {
+        return match ($this->whatsapp_send_status) {
+            'queued' => 'Na fila',
+            'processando' => 'Processando',
+            'sent' => 'Enviado',
+            'erro' => 'Erro',
+            'ignorado' => 'Ignorado',
+            default => $this->whatsapp_send_status ?: '-',
+        };
     }
 
     public function getStatusOptionsAttribute(): array

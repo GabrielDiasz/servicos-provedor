@@ -7,16 +7,14 @@ window.ordensPage = () => ({
     whatsappLabel: '',
     whatsappAbrirSgp: false,
     whatsappReady: false,
-    whatsappCountdown: 5,
+    whatsappCountdown: 4,
     whatsappTimer: null,
-    whatsappReadyTimer: null,
     filtersOpen: false,
+    whatsappCountdownDuration: 4,
 
     clearWhatsappTimers() {
         clearInterval(this.whatsappTimer);
-        clearTimeout(this.whatsappReadyTimer);
         this.whatsappTimer = null;
-        this.whatsappReadyTimer = null;
     },
 
     openWhatsappModal(action, label) {
@@ -24,37 +22,32 @@ window.ordensPage = () => ({
         this.whatsappLabel = label;
         this.whatsappAbrirSgp = false;
         this.whatsappReady = false;
-        this.whatsappCountdown = 5;
+        this.whatsappCountdown = this.whatsappCountdownDuration;
         this.whatsappModalOpen = true;
         this.clearWhatsappTimers();
 
         this.whatsappTimer = setInterval(() => {
+            if (!this.whatsappModalOpen) {
+                this.clearWhatsappTimers();
+                return;
+            }
+
             if (this.whatsappCountdown > 1) {
                 this.whatsappCountdown -= 1;
                 return;
             }
 
             this.whatsappCountdown = 0;
+            this.whatsappReady = true;
             clearInterval(this.whatsappTimer);
             this.whatsappTimer = null;
         }, 1000);
-
-        this.whatsappReadyTimer = setTimeout(() => {
-            if (!this.whatsappModalOpen) {
-                return;
-            }
-
-            this.whatsappReady = true;
-            this.whatsappCountdown = 0;
-            clearInterval(this.whatsappTimer);
-            this.whatsappTimer = null;
-        }, 3000);
     },
 
     closeWhatsappModal() {
         this.whatsappModalOpen = false;
         this.whatsappReady = false;
-        this.whatsappCountdown = 5;
+        this.whatsappCountdown = this.whatsappCountdownDuration;
         this.whatsappAbrirSgp = false;
         this.whatsappAction = '';
         this.whatsappLabel = '';

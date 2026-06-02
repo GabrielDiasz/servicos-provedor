@@ -6,13 +6,13 @@ use App\Models\OrdemServico;
 use App\Models\Tecnico;
 use App\Models\WhatsAppGrupo;
 use App\Models\User;
+use App\Jobs\CreateSgpOccurrenceJob;
+use App\Jobs\SendWhatsappMessageJob;
 use App\Services\SgpService;
-use App\Services\WhatsAppService;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
 
@@ -33,17 +33,10 @@ class OrdemServicoTelefoneTest extends TestCase
         ]);
 
         $sgp = Mockery::mock(SgpService::class);
-        $sgp->shouldReceive('consultarClientePorLink')
-            ->once()
-            ->andReturn([
-                'cliente_nome' => 'Cliente SGP',
-                'cliente_telefone' => '73911111111',
-                'bairro' => 'Centro',
-                'sgp_cliente_id' => 5151,
-                'sgp_contrato_id' => 5151,
-            ]);
-
+        $sgp->shouldNotReceive('consultarClientePorLink');
         $this->app->instance(SgpService::class, $sgp);
+
+        Bus::fake();
 
         $this->actingAs($user)
             ->post(route('ordens.store'), [
@@ -60,14 +53,18 @@ class OrdemServicoTelefoneTest extends TestCase
             ])
             ->assertRedirect(route('ordens.index'));
 
+        Bus::assertDispatched(CreateSgpOccurrenceJob::class);
+        Bus::assertNotDispatched(SendWhatsappMessageJob::class);
+
         $this->assertDatabaseHas('ordens_servico', [
             'cliente_nome' => 'Cliente Final',
             'cliente_telefone' => '73999999999',
             'bairro' => 'Tapera',
-            'sgp_cliente_id' => 5151,
+            'sgp_cliente_id' => null,
             'sgp_ocorrencia_numero' => null,
             'sgp_os_numero' => null,
-            'sgp_sync_status' => null,
+            'sgp_sync_status' => 'queued',
+            'whatsapp_send_status' => null,
         ]);
     }
 
@@ -93,22 +90,7 @@ class OrdemServicoTelefoneTest extends TestCase
             'sgp_contrato_id' => 5151,
         ]);
 
-        $sgp = Mockery::mock(SgpService::class);
-        $sgp->shouldReceive('sincronizarOcorrenciaEOrdemServico')
-            ->once()
-            ->andReturn([
-                'status' => 'synced',
-                'ocorrencia_numero' => '260528999999',
-                'os_numero' => '14147',
-            ]);
-
-        $whatsApp = Mockery::mock(WhatsAppService::class);
-        $whatsApp->shouldReceive('enviarOrdemServico')
-            ->once()
-            ->andReturn(true);
-
-        $this->app->instance(SgpService::class, $sgp);
-        $this->app->instance(WhatsAppService::class, $whatsApp);
+        Bus::fake();
 
         $this->actingAs($user)
             ->post(route('ordens.enviar-whatsapp', $ordem), [
@@ -116,12 +98,17 @@ class OrdemServicoTelefoneTest extends TestCase
             ])
             ->assertRedirect();
 
+        Bus::assertDispatched(CreateSgpOccurrenceJob::class, function (CreateSgpOccurrenceJob $job) use ($ordem) {
+            return $job->ordemId === $ordem->id && $job->dispatchWhatsapp === true;
+        });
+        Bus::assertNotDispatched(SendWhatsappMessageJob::class);
+
         $this->assertDatabaseHas('ordens_servico', [
             'id' => $ordem->id,
-            'status' => 'passada',
-            'sgp_ocorrencia_numero' => '260528999999',
-            'sgp_os_numero' => '14147',
-            'sgp_sync_status' => 'sincronizado',
+            'status' => 'pendente',
+            'sgp_ocorrencia_numero' => null,
+            'sgp_os_numero' => null,
+            'sgp_sync_status' => 'queued',
         ]);
     }
 
@@ -147,16 +134,7 @@ class OrdemServicoTelefoneTest extends TestCase
             'sgp_contrato_id' => 5151,
         ]);
 
-        $sgp = Mockery::mock(SgpService::class);
-        $sgp->shouldReceive('sincronizarOcorrenciaEOrdemServico')->never();
-
-        $whatsApp = Mockery::mock(WhatsAppService::class);
-        $whatsApp->shouldReceive('enviarOrdemServico')
-            ->once()
-            ->andReturn(true);
-
-        $this->app->instance(SgpService::class, $sgp);
-        $this->app->instance(WhatsAppService::class, $whatsApp);
+        Bus::fake();
 
         $this->actingAs($user)
             ->post(route('ordens.enviar-whatsapp', $ordem), [
@@ -164,12 +142,17 @@ class OrdemServicoTelefoneTest extends TestCase
             ])
             ->assertRedirect();
 
+        Bus::assertDispatched(SendWhatsappMessageJob::class, function (SendWhatsappMessageJob $job) use ($ordem) {
+            return $job->ordemId === $ordem->id;
+        });
+        Bus::assertNotDispatched(CreateSgpOccurrenceJob::class);
+
         $this->assertDatabaseHas('ordens_servico', [
             'id' => $ordem->id,
-            'status' => 'passada',
+            'status' => 'pendente',
             'sgp_ocorrencia_numero' => null,
             'sgp_os_numero' => null,
-            'sgp_sync_status' => null,
+            'whatsapp_send_status' => 'queued',
         ]);
     }
 
@@ -206,59 +189,21 @@ class OrdemServicoTelefoneTest extends TestCase
             'user_id' => $user->id,
             'sgp_cliente_id' => 5151,
             'sgp_contrato_id' => 5151,
-            'sgp_pppoe_login' => '2020',
-            'sgp_pppoe_senha' => 'senha',
-            'sgp_dados' => [
-                'contratos' => [[
-                    'servicos' => [[
-                        'endereco' => [
-                            'logradouro' => 'RUA EXEMPLO',
-                            'numero' => '10',
-                            'bairro' => 'CENTRO',
-                        ],
-                    ]],
-                ]],
-            ],
         ]);
-
-        config([
-            'services.sgp.url' => 'https://sgp.exemplo',
-            'services.sgp.web_username' => 'usuario-teste',
-            'services.sgp.web_password' => 'senha-teste',
-        ]);
-
-        Http::fake([
-            '*send-sgp-address*' => Http::response(['sent' => true], 200),
-            '*send-message*' => Http::response(['sent' => true], 200),
-        ]);
+        Bus::fake();
 
         $this->actingAs($user)
             ->post(route('ordens.enviar-whatsapp', $ordem))
             ->assertRedirect();
 
-        Http::assertSentCount(5);
-        Http::assertSentInOrder([
-            fn ($request) => str_contains($request->url(), '/send-sgp-address')
-                && $request['group_id'] === $grupo->grupo_id
-                && $request['base_url'] === 'https://sgp.exemplo'
-                && str_contains($request['cliente_url'], '/admin/cliente/5151/edit/')
-                && $request['username'] === 'usuario-teste'
-                && $request['password'] === 'senha-teste'
-                && str_contains($request['caption'], 'INSTALA')
-                && ! str_contains($request['caption'], ' - '),
-            fn ($request) => str_contains($request->url(), '/send-message')
-                && str_contains($request['message'], 'Titular: Cliente Final'),
-            fn ($request) => str_contains($request->url(), '/send-message')
-                && str_contains($request['message'], '2020'),
-            fn ($request) => str_contains($request->url(), '/send-message')
-                && str_contains($request['message'], 'senha'),
-            fn ($request) => str_contains($request->url(), '/send-message')
-                && str_contains($request['message'], '73999999999'),
-        ]);
+        Bus::assertDispatched(SendWhatsappMessageJob::class, function (SendWhatsappMessageJob $job) use ($ordem) {
+            return $job->ordemId === $ordem->id;
+        });
 
         $this->assertDatabaseHas('ordens_servico', [
             'id' => $ordem->id,
-            'status' => 'passada',
+            'status' => 'pendente',
+            'whatsapp_send_status' => 'queued',
         ]);
     }
 

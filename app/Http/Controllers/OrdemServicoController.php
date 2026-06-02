@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\CreateSgpOccurrenceJob;
+use App\Jobs\SendWhatsappMessageJob;
 use App\Models\OrdemServico;
 use App\Models\Tecnico;
 use App\Services\SgpService;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -98,7 +99,7 @@ class OrdemServicoController extends Controller
         ]);
     }
 
-    public function store(Request $request, SgpService $sgp)
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'cliente_nome' => 'required|string|max:255',
@@ -117,12 +118,33 @@ class OrdemServicoController extends Controller
 
         $validated['user_id'] = Auth::id();
         $validated['status'] = 'pendente';
-        $validated = $this->preencherDadosSgp($validated, $sgp);
+        $validated['sgp_sync_status'] = 'queued';
+        $validated['sgp_sync_error'] = null;
+        $validated['whatsapp_send_status'] = null;
+        $validated['whatsapp_send_error'] = null;
+        $validated['whatsapp_sent_at'] = null;
 
-        OrdemServico::create($validated);
+        $ordem = OrdemServico::create($validated);
+
+        CreateSgpOccurrenceJob::dispatch(
+            $ordem->id,
+            Auth::user()?->name,
+            Auth::user()?->email,
+            true
+        )->afterCommit();
+
+        $payload = [
+            'success' => true,
+            'message' => 'Ocorrência criada com sucesso e está sendo processada.',
+            'ordem_id' => $ordem->id,
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json($payload);
+        }
 
         return redirect()->route('ordens.index')
-            ->with('success', 'Ordem de serviço criada com sucesso.');
+            ->with('success', $payload['message']);
     }
 
     public function show(OrdemServico $ordem)
@@ -170,30 +192,50 @@ class OrdemServicoController extends Controller
             ->with('success', 'Ordem de serviço atualizada com sucesso!');
     }
 
-    public function enviarWhatsApp(Request $request, OrdemServico $ordem, WhatsAppService $whatsApp, SgpService $sgp)
+    public function enviarWhatsApp(Request $request, OrdemServico $ordem)
     {
         $abrirOcorrenciaSgp = $request->boolean('abrir_ocorrencia_sgp');
 
         if ($abrirOcorrenciaSgp) {
-            $sincronizacao = $this->garantirSincronizacaoSgp($ordem, $sgp, Auth::user()?->name, Auth::user()?->email);
+            $ordem->forceFill([
+                'sgp_sync_status' => $ordem->sgp_sync_status === 'sincronizado' ? $ordem->sgp_sync_status : 'queued',
+                'sgp_sync_error' => null,
+                'whatsapp_send_status' => 'queued',
+                'whatsapp_send_error' => null,
+            ])->save();
 
-            if ($sincronizacao['status'] !== 'synced') {
-                return back()->with('error', 'Não foi possível criar a ocorrência/OS no SGP antes do envio do WhatsApp: '.($sincronizacao['message'] ?? 'erro desconhecido.'));
-            }
+            CreateSgpOccurrenceJob::dispatch(
+                $ordem->id,
+                Auth::user()?->name,
+                Auth::user()?->email,
+                true
+            )->afterCommit();
+
+            $message = 'Ocorrência e envio do WhatsApp foram enfileirados.';
+        } else {
+            $ordem->forceFill([
+                'whatsapp_send_status' => 'queued',
+                'whatsapp_send_error' => null,
+            ])->save();
+
+            SendWhatsappMessageJob::dispatch(
+                $ordem->id,
+                Auth::user()?->name,
+                Auth::user()?->email
+            )->afterCommit();
+
+            $message = 'Envio do WhatsApp enfileirado com sucesso.';
         }
 
-        if ($whatsApp->enviarOrdemServico($ordem)) {
-            $ordem->update(['status' => 'passada']);
-
-            return back()->with(
-                'success',
-                $abrirOcorrenciaSgp
-                    ? 'Ordem de serviço enviada para o técnico pelo WhatsApp e sincronizada com o SGP.'
-                    : 'Ordem de serviço enviada para o técnico pelo WhatsApp.'
-            );
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'ordem_id' => $ordem->id,
+            ]);
         }
 
-        return back()->with('error', 'Não foi possível enviar a ordem pelo WhatsApp. Confira se o serviço está conectado e se o técnico tem um grupo de envio válido.');
+        return back()->with('success', $message);
     }
 
     public function atualizarStatus(Request $request, OrdemServico $ordem)
