@@ -1,4 +1,4 @@
-<div class="overflow-hidden rounded-2xl border border-[#3a3a40] bg-[#232326] shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+<div class="overflow-x-auto rounded-2xl border border-[#3a3a40] bg-[#232326] shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
     <table class="min-w-full divide-y divide-[#35353a] text-sm text-[#e4e4e7]">
         <thead class="bg-[#1f1f22]">
             <tr>
@@ -6,7 +6,7 @@
                     #
                 </th>
 
-                <th class="px-4 py-3 text-left text-[11px] font-medium tracking-[0.02em] text-[#a1a1aa]">
+                <th class="w-[26rem] px-4 py-3 text-left text-[11px] font-medium tracking-[0.02em] text-[#a1a1aa]">
                     Cliente
                 </th>
 

@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div x-data="ordensPage()" class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div x-data="ordensPage()" class="mx-auto max-w-[92rem] px-4 py-6 sm:px-6 lg:px-8">
         <div class="space-y-4">
             @include('ordens.partials.filtros')
             @include('ordens.partials.resumo')

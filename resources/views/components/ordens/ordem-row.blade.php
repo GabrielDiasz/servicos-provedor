@@ -6,7 +6,7 @@
     </td>
 
     {{-- Cliente --}}
-    <td class="px-4 py-3.5 align-middle">
+    <td class="w-[26rem] px-4 py-3.5 align-middle">
         <div class="min-w-0 space-y-1 leading-tight">
             @if (filled($ordem->sgp_cliente_link))
                 <a href="{{ $ordem->sgp_cliente_link }}"

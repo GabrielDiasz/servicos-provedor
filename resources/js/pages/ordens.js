@@ -7,10 +7,10 @@ window.ordensPage = () => ({
     whatsappLabel: '',
     whatsappAbrirSgp: false,
     whatsappReady: false,
-    whatsappCountdown: 4,
+    whatsappCountdown: 3,
     whatsappTimer: null,
     filtersOpen: false,
-    whatsappCountdownDuration: 4,
+    whatsappCountdownDuration: 3,
 
     clearWhatsappTimers() {
         clearInterval(this.whatsappTimer);
