@@ -91,6 +91,84 @@ class QueueJobsTest extends TestCase
         ]);
     }
 
+    public function test_create_sgp_job_usa_o_tecnico_do_momento_em_que_foi_enfileirado(): void
+    {
+        $user = User::factory()->create([
+            'perfil' => 'admin',
+        ]);
+
+        $tecnicoJhon = Tecnico::create([
+            'nome' => 'Jhon',
+            'telefone' => '73900000000',
+            'ativo' => true,
+        ]);
+
+        $tecnicoVanderley = Tecnico::create([
+            'nome' => 'Vanderley',
+            'telefone' => '73900000001',
+            'ativo' => true,
+        ]);
+
+        $ordem = OrdemServico::create([
+            'cliente_nome' => 'Cliente Final',
+            'cliente_telefone' => '73999999999',
+            'sgp_cliente_link' => 'https://seu-sgp.exemplo/admin/cliente/5151/edit/',
+            'bairro' => 'Tapera',
+            'tipo_servico' => 'reparo',
+            'turno' => 'manha',
+            'prioridade' => 'normal',
+            'status' => 'pendente',
+            'data_marcacao' => now()->toDateString(),
+            'observacao' => null,
+            'tecnico_id' => $tecnicoJhon->id,
+            'user_id' => $user->id,
+            'sgp_sync_status' => 'queued',
+        ]);
+
+        $sgp = Mockery::mock(SgpService::class);
+        $sgp->shouldReceive('consultarClientePorLink')
+            ->once()
+            ->andReturn([
+                'sgp_cliente_id' => 5151,
+                'sgp_contrato_id' => 5151,
+                'sgp_cpf_cnpj' => '00000000000',
+                'sgp_data_nascimento' => null,
+                'sgp_plano' => '500M',
+                'sgp_vencimento' => '10',
+                'sgp_pppoe_login' => 'cliente5151',
+                'sgp_pppoe_senha' => 'senha5151',
+                'sgp_endereco' => 'Rua Exemplo, 10',
+                'sgp_dados' => [],
+            ]);
+        $sgp->shouldReceive('sincronizarOcorrenciaEOrdemServico')
+            ->once()
+            ->with(Mockery::on(function (OrdemServico $ordemRecebida) use ($tecnicoJhon) {
+                return $ordemRecebida->tecnico_id === $tecnicoJhon->id;
+            }), $user->name, $user->email)
+            ->andReturn([
+                'status' => 'synced',
+                'ocorrencia_numero' => '260528999998',
+                'os_numero' => '14148',
+            ]);
+
+        $job = new CreateSgpOccurrenceJob($ordem->id, $user->name, $user->email, true, $tecnicoJhon->id);
+
+        $ordem->update([
+            'tecnico_id' => $tecnicoVanderley->id,
+        ]);
+
+        $job->handle($sgp);
+
+        $this->assertDatabaseHas('ordens_servico', [
+            'id' => $ordem->id,
+            'sgp_cliente_id' => 5151,
+            'sgp_contrato_id' => 5151,
+            'sgp_ocorrencia_numero' => '260528999998',
+            'sgp_os_numero' => '14148',
+            'sgp_sync_status' => 'sincronizado',
+        ]);
+    }
+
     public function test_send_whatsapp_job_marca_a_os_como_enviada_quando_tudo_da_certo(): void
     {
         $user = User::factory()->create([

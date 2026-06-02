@@ -83,6 +83,7 @@ class OrdemServico extends Model
         'sgp_endereco',
         'sgp_dados',
         'sgp_ocorrencia_numero',
+        'sgp_ocorrencia_sgp_id',
         'sgp_os_numero',
         'sgp_sync_status',
         'sgp_sync_error',

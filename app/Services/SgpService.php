@@ -48,56 +48,80 @@ class SgpService
         $cookieJar = new CookieJar;
 
         try {
-            $ocorrenciaPath = "/admin/atendimento/cliente/{$ordem->sgp_cliente_id}/ocorrencia/add/";
-            $this->autenticarPortalWeb($cookieJar, $ocorrenciaPath);
-
-            $ocorrenciaHtml = $this->carregarPaginaWeb($cookieJar, $ocorrenciaPath);
-            $numeroOcorrencia = $this->extrairCampoHtml($ocorrenciaHtml, 'numero');
-
-            if (! $numeroOcorrencia) {
-                throw new \RuntimeException('Não foi possível obter o número da ocorrência no SGP.');
-            }
-
-            $usuarioSgp = $this->resolverUsuarioResponsavelSgp($ocorrenciaHtml, $usuarioResponsavel, $usuarioEmail);
+            $ocorrenciaId = trim((string) ($ordem->sgp_ocorrencia_sgp_id ?? ''));
+            $numeroOcorrencia = $ordem->sgp_ocorrencia_numero;
             $dataAgendamento = now()->format('d/m/Y H:i:s');
             $conteudoOcorrencia = $this->conteudoOcorrenciaSgp($ordem);
 
-            $ocorrenciaPayload = array_filter([
-                'csrfmiddlewaretoken' => $this->extrairCampoHtml($ocorrenciaHtml, 'csrfmiddlewaretoken'),
-                'dpb_token' => $this->extrairCampoHtml($ocorrenciaHtml, 'dpb_token'),
-                'numero' => $numeroOcorrencia,
-                'clientecontrato' => (string) $ordem->sgp_contrato_id,
-                'servico' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'servico', 'Internet', null),
-                'tipo' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'tipo', $this->mapaTipoOcorrencia($ordem), '18'),
-                'metodo' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'metodo', 'WhatsApp', '5'),
-                'origem' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'origem', 'WhatsApp', '5'),
-                'status' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'status', 'Aberta', '0'),
-                'usuario_responsavel' => $usuarioSgp,
-                'usuariorresponsavel' => $usuarioSgp,
-                'responsavel' => $usuarioSgp,
-                'conteudo' => $conteudoOcorrencia,
-                'observacoes' => '',
-                'data_agendamento' => $dataAgendamento,
-                'os' => 'on',
-                'protocolo_sms_2' => '',
-                'encerra_os' => 'on',
-                'gateway_sms' => '',
-                'gateway_email' => '',
-            ], static fn ($value) => $value !== null);
+            if ($ocorrenciaId !== '' && blank($ordem->sgp_os_numero)) {
+                $osPath = "/admin/atendimento/ocorrencia/{$ocorrenciaId}/os/add/";
 
-            $ocorrenciaResponse = $this->enviarFormularioWeb($cookieJar, $ocorrenciaPath, $ocorrenciaPayload);
+                Log::info('Reaproveitando ocorrência já criada no SGP para concluir a OS.', [
+                    'ordem_id' => $ordem->id,
+                    'cliente_id' => $ordem->sgp_cliente_id,
+                    'ocorrencia_sgp_id' => $ocorrenciaId,
+                    'ocorrencia_numero' => $numeroOcorrencia,
+                ]);
 
-            if ($ocorrenciaResponse->status() !== 302) {
-                throw new \RuntimeException('O SGP não redirecionou após criar a ocorrência.');
+                $this->autenticarPortalWeb($cookieJar, $osPath);
+            } else {
+                $ocorrenciaPath = "/admin/atendimento/cliente/{$ordem->sgp_cliente_id}/ocorrencia/add/";
+                $this->autenticarPortalWeb($cookieJar, $ocorrenciaPath);
+
+                $ocorrenciaHtml = $this->carregarPaginaWeb($cookieJar, $ocorrenciaPath);
+                $numeroOcorrencia = $this->extrairCampoHtml($ocorrenciaHtml, 'numero');
+
+                if (! $numeroOcorrencia) {
+                    throw new \RuntimeException('Não foi possível obter o número da ocorrência no SGP.');
+                }
+
+                $usuarioSgp = $this->resolverUsuarioResponsavelSgp($ocorrenciaHtml, $usuarioResponsavel, $usuarioEmail);
+
+                $ocorrenciaPayload = array_filter([
+                    'csrfmiddlewaretoken' => $this->extrairCampoHtml($ocorrenciaHtml, 'csrfmiddlewaretoken'),
+                    'dpb_token' => $this->extrairCampoHtml($ocorrenciaHtml, 'dpb_token'),
+                    'numero' => $numeroOcorrencia,
+                    'clientecontrato' => (string) $ordem->sgp_contrato_id,
+                    'servico' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'servico', 'Internet', null),
+                    'tipo' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'tipo', $this->mapaTipoOcorrencia($ordem), '18'),
+                    'metodo' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'metodo', 'WhatsApp', '5'),
+                    'origem' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'origem', 'WhatsApp', '5'),
+                    'status' => $this->resolverOpcaoPorTexto($ocorrenciaHtml, 'status', 'Aberta', '0'),
+                    'usuario_responsavel' => $usuarioSgp,
+                    'usuariorresponsavel' => $usuarioSgp,
+                    'responsavel' => $usuarioSgp,
+                    'conteudo' => $conteudoOcorrencia,
+                    'observacoes' => '',
+                    'data_agendamento' => $dataAgendamento,
+                    'os' => 'on',
+                    'protocolo_sms_2' => '',
+                    'encerra_os' => 'on',
+                    'gateway_sms' => '',
+                    'gateway_email' => '',
+                ], static fn ($value) => $value !== null);
+
+                $ocorrenciaResponse = $this->enviarFormularioWeb($cookieJar, $ocorrenciaPath, $ocorrenciaPayload);
+
+                if ($ocorrenciaResponse->status() !== 302) {
+                    throw new \RuntimeException('O SGP não redirecionou após criar a ocorrência.');
+                }
+
+                $osPath = $this->normalizarCaminhoSgp($ocorrenciaResponse->header('Location') ?: '');
+                $ocorrenciaId = $this->extrairIdDoCaminhoSgp($osPath);
+
+                if (! $ocorrenciaId) {
+                    throw new \RuntimeException('Não foi possível identificar o ID da ocorrência criada no SGP.');
+                }
+
+                $ordem->forceFill([
+                    'sgp_ocorrencia_sgp_id' => $ocorrenciaId,
+                    'sgp_ocorrencia_numero' => $numeroOcorrencia,
+                    'sgp_sync_status' => 'processando',
+                    'sgp_sync_error' => null,
+                ])->save();
             }
 
-            $osPath = $this->normalizarCaminhoSgp($ocorrenciaResponse->header('Location') ?: '');
-            $ocorrenciaId = $this->extrairIdDoCaminhoSgp($osPath);
-
-            if (! $ocorrenciaId) {
-                throw new \RuntimeException('Não foi possível identificar o ID da ocorrência criada no SGP.');
-            }
-
+            $osPath ??= "/admin/atendimento/ocorrencia/{$ocorrenciaId}/os/add/";
             $osHtml = $this->carregarPaginaWeb($cookieJar, $osPath);
             $tecnicoResponsavel = $this->resolverTecnicoResponsavelSgp($ordem, $osHtml);
 

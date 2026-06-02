@@ -123,6 +123,7 @@ class OrdemServicoController extends Controller
         $validated['whatsapp_send_status'] = null;
         $validated['whatsapp_send_error'] = null;
         $validated['whatsapp_sent_at'] = null;
+        $validated['sgp_ocorrencia_sgp_id'] = null;
 
         $ordem = OrdemServico::create($validated);
 
@@ -130,7 +131,8 @@ class OrdemServicoController extends Controller
             $ordem->id,
             Auth::user()?->name,
             Auth::user()?->email,
-            true
+            true,
+            $ordem->tecnico_id
         )->afterCommit();
 
         $payload = [
@@ -208,7 +210,8 @@ class OrdemServicoController extends Controller
                 $ordem->id,
                 Auth::user()?->name,
                 Auth::user()?->email,
-                true
+                true,
+                $ordem->tecnico_id
             )->afterCommit();
 
             $message = 'Ocorrência e envio do WhatsApp foram enfileirados.';
@@ -301,7 +304,7 @@ class OrdemServicoController extends Controller
             return $ordem ? array_merge($validated, $this->camposSgpVazios()) : $validated;
         }
 
-        return array_merge($dadosSgp, $validated, [
+        return array_merge($this->camposSgpVazios(), $dadosSgp, $validated, [
             'sgp_cliente_link' => $validated['sgp_cliente_link'],
         ]);
     }
@@ -320,6 +323,7 @@ class OrdemServicoController extends Controller
             'sgp_endereco' => null,
             'sgp_dados' => null,
             'sgp_ocorrencia_numero' => null,
+            'sgp_ocorrencia_sgp_id' => null,
             'sgp_os_numero' => null,
             'sgp_sync_status' => null,
             'sgp_sync_error' => null,
@@ -346,6 +350,7 @@ class OrdemServicoController extends Controller
         if ($sincronizacao['status'] === 'synced') {
             $ordem->update([
                 'sgp_ocorrencia_numero' => $sincronizacao['ocorrencia_numero'] ?? null,
+                'sgp_ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
                 'sgp_os_numero' => $sincronizacao['os_numero'] ?? null,
                 'sgp_sync_status' => 'sincronizado',
                 'sgp_sync_error' => null,

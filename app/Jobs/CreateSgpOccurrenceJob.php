@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\OrdemServico;
+use App\Models\Tecnico;
 use App\Services\SgpService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -29,6 +30,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
         public ?string $usuarioResponsavel = null,
         public ?string $usuarioEmail = null,
         public bool $dispatchWhatsapp = true,
+        public ?int $tecnicoIdSnapshot = null,
     ) {
     }
 
@@ -48,10 +50,22 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             ->with(['tecnico.whatsappGrupo', 'atendente'])
             ->findOrFail($this->ordemId);
 
+        if ($this->tecnicoIdSnapshot !== null) {
+            $tecnicoSnapshot = Tecnico::query()
+                ->with('whatsappGrupo')
+                ->find($this->tecnicoIdSnapshot);
+
+            if ($tecnicoSnapshot) {
+                $ordem->setRelation('tecnico', $tecnicoSnapshot);
+                $ordem->tecnico_id = $tecnicoSnapshot->id;
+            }
+        }
+
         Log::info('Iniciando job de criacao de ocorrencia no SGP.', [
             'ordem_id' => $ordem->id,
             'cliente_id' => $ordem->sgp_cliente_id,
             'tecnico_id' => $ordem->tecnico_id,
+            'tecnico_id_snapshot' => $this->tecnicoIdSnapshot,
             'status_sgp' => $ordem->sgp_sync_status,
             'payload' => $this->contextoOrdem($ordem),
         ]);
@@ -62,6 +76,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 'cliente_id' => $ordem->sgp_cliente_id,
                 'status_sgp' => $ordem->sgp_sync_status,
                 'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                'ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
                 'os_numero' => $ordem->sgp_os_numero,
             ]);
 
@@ -129,6 +144,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 'cliente_id' => $ordem->sgp_cliente_id,
                 'status_sgp' => $ordem->sgp_sync_status,
                 'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                'ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
                 'os_numero' => $ordem->sgp_os_numero,
                 'payload' => $this->contextoOrdem($ordem),
             ]);
@@ -207,6 +223,7 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             'cliente_id' => $ordem->sgp_cliente_id,
             'cliente_nome' => $ordem->cliente_nome,
             'tecnico_id' => $ordem->tecnico_id,
+            'tecnico_id_snapshot' => $this->tecnicoIdSnapshot,
             'sgp_cliente_link' => $ordem->sgp_cliente_link,
             'tipo_servico' => $ordem->tipo_servico,
             'status' => $ordem->status,
