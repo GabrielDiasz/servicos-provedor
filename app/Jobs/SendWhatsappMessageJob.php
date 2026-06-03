@@ -77,6 +77,12 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
             }
         }
 
+        $this->workerConsole("OS #{$ordem->id}: iniciando envio pelo WhatsApp.", [
+            'status_whatsapp' => $ordem->whatsapp_send_status,
+            'tecnico_id' => $ordem->tecnico_id,
+            'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+        ]);
+
         Log::info('Iniciando job de envio de WhatsApp.', [
             'ordem_id' => $ordem->id,
             'cliente_id' => $ordem->sgp_cliente_id,
@@ -88,6 +94,11 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
         ]);
 
         if ($this->whatsappJaEnviado($ordem)) {
+            $this->workerConsole("OS #{$ordem->id}: WhatsApp já havia sido enviado. Encerrando sem duplicar.", [
+                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                'enviado_em' => $ordem->whatsapp_sent_at?->toDateTimeString(),
+            ]);
+
             Log::info('WhatsApp ja havia sido enviado para esta ordem; job encerrado sem duplicar envio.', [
                 'ordem_id' => $ordem->id,
                 'cliente_id' => $ordem->sgp_cliente_id,
@@ -106,6 +117,8 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
                 'whatsapp_send_error' => 'Integração com o WhatsApp desativada.',
             ])->save();
 
+            $this->workerConsole("OS #{$ordem->id}: integração WhatsApp desativada. Envio ignorado.");
+
             Log::info('WhatsApp desativado; job encerrado sem envio.', [
                 'ordem_id' => $ordem->id,
                 'cliente_id' => $ordem->sgp_cliente_id,
@@ -121,6 +134,10 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
                 'whatsapp_send_error' => 'Ordem sem grupo de WhatsApp do técnico.',
             ])->save();
 
+            $this->workerConsole("OS #{$ordem->id}: técnico sem grupo de WhatsApp. Envio ignorado.", [
+                'tecnico_id' => $ordem->tecnico_id,
+            ], true);
+
             Log::warning('Ordem sem grupo do tecnico para envio via WhatsApp.', [
                 'ordem_id' => $ordem->id,
                 'tecnico_id' => $ordem->tecnico_id,
@@ -135,9 +152,13 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
             'whatsapp_send_error' => null,
         ])->save();
 
+        $this->workerConsole("OS #{$ordem->id}: preparando dados do SGP e montando mensagens do WhatsApp.");
+
         try {
             $this->garantirDadosSgpLocalmente($ordem, $sgp);
             $ordem->refresh();
+
+            $this->workerConsole("OS #{$ordem->id}: chamando serviço do WhatsApp.");
 
             $enviado = $whatsApp->enviarOrdemServico($ordem);
 
@@ -146,6 +167,10 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
                     'whatsapp_send_status' => 'erro',
                     'whatsapp_send_error' => 'O envio pelo WhatsApp retornou falso sem excecao.',
                 ])->save();
+
+                $this->workerConsole("OS #{$ordem->id}: o serviço do WhatsApp retornou falso.", [
+                    'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                ], true);
 
                 Log::warning('Job do WhatsApp nao conseguiu concluir o envio.', [
                     'ordem_id' => $ordem->id,
@@ -164,6 +189,10 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
                 'whatsapp_sent_at' => now(),
                 'whatsapp_sent_for_sgp_ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
             ])->save();
+
+            $this->workerConsole("OS #{$ordem->id}: WhatsApp enviado com sucesso.", [
+                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+            ]);
 
             Log::info('WhatsApp enviado com sucesso.', [
                 'ordem_id' => $ordem->id,
@@ -245,5 +274,22 @@ class SendWhatsappMessageJob implements ShouldQueue, ShouldBeUnique
             'status' => $ordem->status,
             'tipo_servico' => $ordem->tipo_servico,
         ];
+    }
+
+    private function workerConsole(string $message, array $context = [], bool $isError = false): void
+    {
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
+        $prefix = $isError ? '[ERRO]' : '[INFO]';
+        $line = $prefix.' WhatsApp > '.$message;
+
+        if ($context !== []) {
+            $line .= ' '.json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        echo $line.PHP_EOL;
+        flush();
     }
 }

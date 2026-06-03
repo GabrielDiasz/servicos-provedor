@@ -14,6 +14,7 @@ const app = express();
 const port = Number(process.env.WHATSAPP_PORT || 3000);
 const host = process.env.WHATSAPP_HOST || '127.0.0.1';
 const authToken = process.env.WHATSAPP_TOKEN || '';
+const startupAt = Date.now();
 const browserPath = process.env.CHROME_PATH || [
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
@@ -24,6 +25,8 @@ const browserPath = process.env.CHROME_PATH || [
 
 app.use(express.json());
 
+let authenticatedAt = null;
+let readyWatchdog = null;
 let isReady = false;
 
 const client = new Client({
@@ -31,6 +34,11 @@ const client = new Client({
         clientId: 'servicos-provedor',
         dataPath: '.whatsapp-session',
     }),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
+        strict: false,
+    },
     puppeteer: {
         headless: true,
         executablePath: browserPath,
@@ -49,11 +57,28 @@ client.on('loading_screen', (percent, message) => {
 });
 
 client.on('authenticated', () => {
+    authenticatedAt = Date.now();
     console.log('WhatsApp autenticado. Aguardando carregamento das conversas...');
+
+    if (readyWatchdog) {
+        clearTimeout(readyWatchdog);
+    }
+
+    readyWatchdog = setTimeout(() => {
+        if (!isReady) {
+            const elapsedSeconds = Math.round((Date.now() - authenticatedAt) / 1000);
+            console.warn(`WhatsApp autenticado ha ${elapsedSeconds}s, mas o evento ready nao foi disparado ainda.`);
+            console.warn('Isso normalmente indica incompatibilidade da web version, session corrompida ou travamento do WhatsApp Web.');
+        }
+    }, 60000);
 });
 
 client.on('ready', () => {
     isReady = true;
+    if (readyWatchdog) {
+        clearTimeout(readyWatchdog);
+        readyWatchdog = null;
+    }
     console.log('WhatsApp conectado e pronto para enviar mensagens.');
 });
 
@@ -339,7 +364,11 @@ async function gerarImagemEnderecoSgp({ baseUrl, clienteUrl, username, password,
 }
 
 app.get('/status', (req, res) => {
-    res.json({ ready: isReady });
+    res.json({
+        ready: isReady,
+        authenticated: authenticatedAt !== null,
+        uptime_seconds: Math.floor((Date.now() - startupAt) / 1000),
+    });
 });
 
 app.post('/send-message', authorize, async (req, res) => {

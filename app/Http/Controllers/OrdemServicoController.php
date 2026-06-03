@@ -197,6 +197,8 @@ class OrdemServicoController extends Controller
                 'sgp_sync_error' => null,
                 'whatsapp_send_status' => 'queued',
                 'whatsapp_send_error' => null,
+                'whatsapp_sent_at' => null,
+                'whatsapp_sent_for_sgp_ocorrencia_numero' => null,
             ])->save();
 
             CreateSgpOccurrenceJob::dispatch(

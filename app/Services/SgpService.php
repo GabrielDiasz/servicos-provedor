@@ -656,16 +656,22 @@ class SgpService
 
     private function resolverTecnicoResponsavelLabel(OrdemServico $ordem): ?string
     {
-        $nomeTecnico = mb_strtolower(trim((string) data_get($ordem, 'tecnico.nome')));
+        $nomeTecnico = $this->normalizarBusca((string) data_get($ordem, 'tecnico.nome'));
 
         if ($nomeTecnico === '') {
             return $this->responsavelPadraoSgp();
         }
 
+        foreach ($this->mapeamentoTecnicoResponsavelPadrao() as $matcher => $responsavel) {
+            if ($matcher !== '' && str_contains($nomeTecnico, $matcher)) {
+                return trim((string) $responsavel) ?: null;
+            }
+        }
+
         $mapa = array_filter(config('services.sgp.tecnico_responsavel_map', []));
 
         foreach ($mapa as $matcher => $responsavel) {
-            $matcher = mb_strtolower(trim((string) $matcher));
+            $matcher = $this->normalizarBusca((string) $matcher);
 
             if ($matcher !== '' && str_contains($nomeTecnico, $matcher)) {
                 return trim((string) $responsavel) ?: null;
@@ -673,6 +679,17 @@ class SgpService
         }
 
         return $this->responsavelPadraoSgp();
+    }
+
+    private function mapeamentoTecnicoResponsavelPadrao(): array
+    {
+        return [
+            'JHON' => 'Jonh cleiton soares cavalcante',
+            'VANDERLEY' => 'Vanderley',
+            'TECNICODETESTE' => 'Pablo Oliveira Bomfim',
+            'TESTE' => 'Pablo Oliveira Bomfim',
+            'MOISES' => 'MOISES BADU DOS SANTOS',
+        ];
     }
 
     private function resolverTecnicoResponsavelSgp(OrdemServico $ordem, string $html): ?string

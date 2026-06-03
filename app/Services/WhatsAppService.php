@@ -26,11 +26,21 @@ class WhatsAppService
         }
 
         try {
+            $this->workerConsole("OS #{$ordem->id}: tentando enviar a imagem do endereço.");
+
             if (! $this->enviarImagemEndereco($ordem)) {
                 return false;
             }
 
-            foreach ($this->mensagensOrdemServico($ordem) as $mensagem) {
+            $mensagens = $this->mensagensOrdemServico($ordem);
+            $this->workerConsole("OS #{$ordem->id}: enviando mensagens de texto no WhatsApp.", [
+                'total' => count($mensagens),
+            ]);
+
+            foreach ($mensagens as $index => $mensagem) {
+                $passo = $index + 1;
+                $this->workerConsole("OS #{$ordem->id}: enviando mensagem {$passo}/".count($mensagens).'.');
+
                 $response = Http::timeout(config('services.whatsapp.timeout', 10))
                     ->connectTimeout(config('services.whatsapp.connect_timeout', 3))
                     ->when(config('services.whatsapp.token'), fn ($http, $token) => $http->withToken($token))
@@ -47,9 +57,15 @@ class WhatsAppService
                         'resposta' => $response->json() ?: $response->body(),
                     ]);
 
+                    $this->workerConsole("OS #{$ordem->id}: falha ao enviar a mensagem {$passo}/".count($mensagens).'.', [
+                        'status' => $response->status(),
+                    ], true);
+
                     return false;
                 }
             }
+
+            $this->workerConsole("OS #{$ordem->id}: todas as mensagens do WhatsApp foram enviadas.");
 
             return true;
         } catch (\Throwable $exception) {
@@ -58,6 +74,10 @@ class WhatsAppService
                 'tecnico_id' => $ordem->tecnico_id,
                 'erro' => $exception->getMessage(),
             ]);
+
+            $this->workerConsole("OS #{$ordem->id}: falha ao enviar ordem de servico pelo WhatsApp.", [
+                'erro' => $exception->getMessage(),
+            ], true);
 
             return false;
         }
@@ -336,8 +356,15 @@ class WhatsAppService
                     'resposta' => $response->json() ?: $response->body(),
                 ]);
 
+                $this->workerConsole("OS #{$ordem->id}: não foi possível enviar a imagem do endereço.", [
+                    'status' => $response->status(),
+                    'resposta' => $response->json() ?: $response->body(),
+                ], true);
+
                 return false;
             }
+
+            $this->workerConsole("OS #{$ordem->id}: imagem do endereço enviada com sucesso.");
 
             return true;
         } catch (\Throwable $exception) {
@@ -346,6 +373,10 @@ class WhatsAppService
                 'tecnico_id' => $ordem->tecnico_id,
                 'erro' => $exception->getMessage(),
             ]);
+
+            $this->workerConsole("OS #{$ordem->id}: falha ao gerar ou enviar a imagem do endereço.", [
+                'erro' => $exception->getMessage(),
+            ], true);
 
             return false;
         }
@@ -367,5 +398,22 @@ class WhatsAppService
     private function onuSgp(OrdemServico $ordem): ?array
     {
         return data_get($ordem->sgp_dados ?? [], 'contratos.0.servicos.0.onu');
+    }
+
+    private function workerConsole(string $message, array $context = [], bool $isError = false): void
+    {
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
+        $prefix = $isError ? '[ERRO]' : '[INFO]';
+        $line = $prefix.' WhatsApp > '.$message;
+
+        if ($context !== []) {
+            $line .= ' '.json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        echo $line.PHP_EOL;
+        flush();
     }
 }

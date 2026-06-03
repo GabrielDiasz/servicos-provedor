@@ -72,6 +72,12 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             }
         }
 
+        $this->workerConsole("OS #{$ordem->id}: iniciando processamento do SGP.", [
+            'status_sgp' => $ordem->sgp_sync_status,
+            'tecnico_id' => $ordem->tecnico_id,
+            'tecnico_snapshot' => $this->tecnicoIdSnapshot,
+        ]);
+
         Log::info('Iniciando job de criacao de ocorrencia no SGP.', [
             'ordem_id' => $ordem->id,
             'cliente_id' => $ordem->sgp_cliente_id,
@@ -82,6 +88,11 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
         ]);
 
         if ($this->ordemJaSincronizada($ordem)) {
+            $this->workerConsole("OS #{$ordem->id}: SGP já sincronizado. Vou apenas encadear o WhatsApp.", [
+                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                'ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
+            ]);
+
             Log::info('Ordem ja estava sincronizada no SGP; job encerrado sem duplicar envio.', [
                 'ordem_id' => $ordem->id,
                 'cliente_id' => $ordem->sgp_cliente_id,
@@ -96,6 +107,10 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                     'whatsapp_send_status' => 'queued',
                     'whatsapp_send_error' => null,
                 ])->save();
+
+                $this->workerConsole("OS #{$ordem->id}: WhatsApp enfileirado após SGP já existente.", [
+                    'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                ]);
 
                 SendWhatsappMessageJob::dispatch(
                     $ordem->id,
@@ -113,9 +128,13 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             'sgp_sync_error' => null,
         ])->save();
 
+        $this->workerConsole("OS #{$ordem->id}: consultando dados locais antes de criar a ocorrência no SGP.");
+
         try {
             $this->garantirDadosSgpLocalmente($ordem, $sgp);
             $ordem->refresh();
+
+            $this->workerConsole("OS #{$ordem->id}: enviando ocorrência para o SGP.");
 
             $resultado = $sgp->sincronizarOcorrenciaEOrdemServico(
                 $ordem,
@@ -138,6 +157,10 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 ]);
 
                 if (($resultado['status'] ?? null) === 'skipped') {
+                    $this->workerConsole("OS #{$ordem->id}: SGP pediu para pular esta operação.", [
+                        'mensagem' => $resultado['message'] ?? null,
+                    ]);
+
                     return;
                 }
 
@@ -151,6 +174,12 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 'sgp_sync_status' => 'sincronizado',
                 'sgp_sync_error' => null,
             ])->save();
+
+            $this->workerConsole("OS #{$ordem->id}: ocorrência criada no SGP com sucesso.", [
+                'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                'ocorrencia_sgp_id' => $ordem->sgp_ocorrencia_sgp_id,
+                'os_numero' => $ordem->sgp_os_numero,
+            ]);
 
             Log::info('Ocorrencia criada no SGP com sucesso.', [
                 'ordem_id' => $ordem->id,
@@ -168,6 +197,10 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                     'whatsapp_send_error' => null,
                 ])->save();
 
+                $this->workerConsole("OS #{$ordem->id}: SGP pronto, enfileirando WhatsApp.", [
+                    'ocorrencia_numero' => $ordem->sgp_ocorrencia_numero,
+                ]);
+
                 SendWhatsappMessageJob::dispatch(
                     $ordem->id,
                     $this->usuarioResponsavel,
@@ -180,6 +213,10 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
                 'sgp_sync_status' => 'erro',
                 'sgp_sync_error' => $exception->getMessage(),
             ])->save();
+
+            $this->workerConsole("OS #{$ordem->id}: falha ao criar a ocorrência no SGP.", [
+                'erro' => $exception->getMessage(),
+            ], true);
 
             Log::error('Falha ao criar ocorrencia no SGP.', [
                 'ordem_id' => $ordem->id,
@@ -251,5 +288,22 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             'error' => 'erro',
             default => 'erro',
         };
+    }
+
+    private function workerConsole(string $message, array $context = [], bool $isError = false): void
+    {
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
+        $prefix = $isError ? '[ERRO]' : '[INFO]';
+        $line = $prefix.' SGP > '.$message;
+
+        if ($context !== []) {
+            $line .= ' '.json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        echo $line.PHP_EOL;
+        flush();
     }
 }

@@ -54,7 +54,7 @@ class SgpServiceTest extends TestCase
         config()->set('services.sgp.tecnico_responsavel_map', [
             'alpha' => 'Responsavel A',
             'beta' => 'Responsavel B',
-            'teste' => 'Responsavel C',
+            'gamma' => 'Responsavel C',
         ]);
 
         $service = new SgpService;
@@ -70,7 +70,7 @@ class SgpServiceTest extends TestCase
         $ordemBeta->setRelation('tecnico', new Tecnico(['nome' => 'Tecnico Beta']));
 
         $ordemTeste = new OrdemServico;
-        $ordemTeste->setRelation('tecnico', new Tecnico(['nome' => 'Tecnico de Teste']));
+        $ordemTeste->setRelation('tecnico', new Tecnico(['nome' => 'Tecnico Gamma']));
 
         $html = '<select name="responsavel"><option value="21">Responsavel A</option><option value="22">Responsavel B</option><option value="28">Responsavel C</option></select>';
 
@@ -82,6 +82,48 @@ class SgpServiceTest extends TestCase
 
         $this->assertSame('Responsavel C', $labelMethod->invoke($service, $ordemTeste));
         $this->assertSame('28', $method->invoke($service, $ordemTeste, $html));
+    }
+
+    public function test_resolver_tecnico_responsavel_usa_o_mapeamento_canonico_dos_tecnicos_da_operacao(): void
+    {
+        config()->set('services.sgp.tecnico_responsavel_map', [
+            'teste' => 'Responsavel Invalido',
+            'jhon' => 'Responsavel Invalido',
+            'vanderley' => 'Responsavel Invalido',
+            'moises' => 'Responsavel Invalido',
+        ]);
+
+        $service = new SgpService;
+        $labelMethod = new ReflectionMethod($service, 'resolverTecnicoResponsavelLabel');
+        $labelMethod->setAccessible(true);
+        $method = new ReflectionMethod($service, 'resolverTecnicoResponsavelSgp');
+        $method->setAccessible(true);
+
+        $ordemTeste = new OrdemServico;
+        $ordemTeste->setRelation('tecnico', new Tecnico(['nome' => 'Técnico de Teste']));
+
+        $ordemJhon = new OrdemServico;
+        $ordemJhon->setRelation('tecnico', new Tecnico(['nome' => 'Jhon']));
+
+        $ordemVanderley = new OrdemServico;
+        $ordemVanderley->setRelation('tecnico', new Tecnico(['nome' => 'Vanderley']));
+
+        $ordemMoises = new OrdemServico;
+        $ordemMoises->setRelation('tecnico', new Tecnico(['nome' => 'Moisés']));
+
+        $html = '<select name="responsavel"><option value="11">Pablo Oliveira Bomfim</option><option value="12">Jonh cleiton soares cavalcante</option><option value="13">Vanderley</option><option value="14">MOISES BADU DOS SANTOS</option></select>';
+
+        $this->assertSame('Pablo Oliveira Bomfim', $labelMethod->invoke($service, $ordemTeste));
+        $this->assertSame('11', $method->invoke($service, $ordemTeste, $html));
+
+        $this->assertSame('Jonh cleiton soares cavalcante', $labelMethod->invoke($service, $ordemJhon));
+        $this->assertSame('12', $method->invoke($service, $ordemJhon, $html));
+
+        $this->assertSame('Vanderley', $labelMethod->invoke($service, $ordemVanderley));
+        $this->assertSame('13', $method->invoke($service, $ordemVanderley, $html));
+
+        $this->assertSame('MOISES BADU DOS SANTOS', $labelMethod->invoke($service, $ordemMoises));
+        $this->assertSame('14', $method->invoke($service, $ordemMoises, $html));
     }
 
     public function test_resolver_tecnico_responsavel_usa_o_responsavel_padrao_quando_nao_existe_correspondencia(): void
