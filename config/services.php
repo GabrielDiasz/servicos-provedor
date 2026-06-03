@@ -61,6 +61,8 @@ return [
                         env('ATTENDANT_PABLO_SGP_RESPONSAVEL_NOME'),
                         env('ATTENDANT_PABLO_SGP_RESPONSAVEL_LOGIN'),
                     ],
+                    'portal_username' => env('ATTENDANT_PABLO_SGP_RESPONSAVEL_LOGIN'),
+                    'portal_password' => env('ATTENDANT_PABLO_SGP_RESPONSAVEL_PASSWORD'),
                 ],
                 [
                     'matchers' => [env('ATTENDANT_PAULO_EMAIL'), env('ATTENDANT_PAULO_NAME')],
@@ -68,6 +70,8 @@ return [
                         env('ATTENDANT_PAULO_SGP_RESPONSAVEL_NOME'),
                         env('ATTENDANT_PAULO_SGP_RESPONSAVEL_LOGIN'),
                     ],
+                    'portal_username' => env('ATTENDANT_PAULO_SGP_RESPONSAVEL_LOGIN'),
+                    'portal_password' => env('ATTENDANT_PAULO_SGP_RESPONSAVEL_PASSWORD'),
                 ],
             ];
 
@@ -87,6 +91,8 @@ return [
                     $mapa[] = [
                         'matchers' => $matchers,
                         'responsaveis' => $responsaveis,
+                        'portal_username' => trim((string) ($par['portal_username'] ?? '')),
+                        'portal_password' => trim((string) ($par['portal_password'] ?? '')),
                     ];
                 }
             }

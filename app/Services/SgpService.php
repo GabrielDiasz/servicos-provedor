@@ -63,10 +63,12 @@ class SgpService
                     'ocorrencia_numero' => $numeroOcorrencia,
                 ]);
 
-                $this->autenticarPortalWeb($cookieJar, $osPath);
+                $credenciaisPortal = $this->resolverCredenciaisPortalSgp($usuarioResponsavel, $usuarioEmail);
+                $this->autenticarPortalWeb($cookieJar, $osPath, $credenciaisPortal['username'], $credenciaisPortal['password']);
             } else {
                 $ocorrenciaPath = "/admin/atendimento/cliente/{$ordem->sgp_cliente_id}/ocorrencia/add/";
-                $this->autenticarPortalWeb($cookieJar, $ocorrenciaPath);
+                $credenciaisPortal = $this->resolverCredenciaisPortalSgp($usuarioResponsavel, $usuarioEmail);
+                $this->autenticarPortalWeb($cookieJar, $ocorrenciaPath, $credenciaisPortal['username'], $credenciaisPortal['password']);
 
                 $ocorrenciaHtml = $this->carregarPaginaWeb($cookieJar, $ocorrenciaPath);
                 $numeroOcorrencia = $this->extrairCampoHtml($ocorrenciaHtml, 'numero');
@@ -382,10 +384,12 @@ class SgpService
         return trim(implode(', ', array_filter([$logradouro, $extras]))) ?: null;
     }
 
-    private function autenticarPortalWeb(CookieJar $cookies, string $nextPath): void
+    private function autenticarPortalWeb(CookieJar $cookies, string $nextPath, ?string $username = null, ?string $password = null): void
     {
         $baseUrl = rtrim(config('services.sgp.url'), '/');
         $loginUrl = $baseUrl.'/accounts/login/?next='.$nextPath;
+        $username = trim((string) ($username ?: config('services.sgp.web_username')));
+        $password = trim((string) ($password ?: config('services.sgp.web_password')));
 
         $loginPage = Http::timeout(config('services.sgp.timeout', 15))
             ->connectTimeout(config('services.sgp.connect_timeout', 5))
@@ -415,8 +419,8 @@ class SgpService
             ->asForm()
             ->post($loginUrl, [
                 'csrfmiddlewaretoken' => $csrf,
-                'username' => config('services.sgp.web_username'),
-                'password' => config('services.sgp.web_password'),
+                'username' => $username,
+                'password' => $password,
                 'next' => $nextPath,
             ]);
 
@@ -652,6 +656,37 @@ class SgpService
         }
 
         return null;
+    }
+
+    private function resolverCredenciaisPortalSgp(?string $usuarioResponsavel = null, ?string $usuarioEmail = null): array
+    {
+        foreach (config('services.sgp.responsavel_usuario_map', []) as $entry) {
+            $matchers = array_filter(array_map(static fn ($valor) => trim((string) $valor), $entry['matchers'] ?? []));
+            $username = trim((string) ($entry['portal_username'] ?? ''));
+            $password = trim((string) ($entry['portal_password'] ?? ''));
+
+            if ($matchers === [] || $username === '' || $password === '') {
+                continue;
+            }
+
+            foreach (array_filter([$usuarioResponsavel, $usuarioEmail]) as $candidato) {
+                $candidatoNormalizado = $this->normalizarBusca((string) $candidato);
+
+                foreach ($matchers as $matcher) {
+                    if ($candidatoNormalizado !== '' && $candidatoNormalizado === $this->normalizarBusca($matcher)) {
+                        return [
+                            'username' => $username,
+                            'password' => $password,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return [
+            'username' => config('services.sgp.web_username'),
+            'password' => config('services.sgp.web_password'),
+        ];
     }
 
     private function resolverTecnicoResponsavelLabel(OrdemServico $ordem): ?string

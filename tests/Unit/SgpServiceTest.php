@@ -181,6 +181,58 @@ class SgpServiceTest extends TestCase
         $this->assertSame('77', $method->invoke($service, $html, 'Paulo Henrique', 'paulo@gpr.local'));
     }
 
+    public function test_configuracao_do_sgp_preserva_credenciais_do_portal_por_atendente(): void
+    {
+        $mapa = config('services.sgp.responsavel_usuario_map');
+
+        $this->assertNotEmpty($mapa);
+        $this->assertSame('Pablo', $mapa[0]['portal_username']);
+        $this->assertSame('04823821556', $mapa[0]['portal_password']);
+        $this->assertSame('paulo', $mapa[1]['portal_username']);
+        $this->assertSame('Paulo12@', $mapa[1]['portal_password']);
+    }
+
+    public function test_resolver_credenciais_portal_sgp_usa_o_login_do_atendente_correspondente(): void
+    {
+        config()->set('services.sgp.responsavel_usuario_map', [
+            [
+                'matchers' => ['Pablo Bomfim', 'pablo@gpr.com'],
+                'responsaveis' => ['Pablo', 'Pablo Bomfim'],
+                'portal_username' => 'Pablo',
+                'portal_password' => 'senha-pablo',
+            ],
+            [
+                'matchers' => ['Paulo Henrique', 'paulo@gpr.com'],
+                'responsaveis' => ['paulo', 'Paulo Henrique'],
+                'portal_username' => 'paulo',
+                'portal_password' => 'senha-paulo',
+            ],
+        ]);
+
+        $service = new SgpService;
+        $method = new ReflectionMethod($service, 'resolverCredenciaisPortalSgp');
+        $method->setAccessible(true);
+
+        $credenciaisPablo = $method->invoke($service, 'Pablo Bomfim', 'pablo@gpr.com');
+        $credenciaisPaulo = $method->invoke($service, 'Paulo Henrique', 'paulo@gpr.com');
+        $credenciaisFallback = $method->invoke($service, 'Outro Usuario', 'outro@gpr.com');
+
+        $this->assertSame([
+            'username' => 'Pablo',
+            'password' => 'senha-pablo',
+        ], $credenciaisPablo);
+
+        $this->assertSame([
+            'username' => 'paulo',
+            'password' => 'senha-paulo',
+        ], $credenciaisPaulo);
+
+        $this->assertSame([
+            'username' => config('services.sgp.web_username'),
+            'password' => config('services.sgp.web_password'),
+        ], $credenciaisFallback);
+    }
+
     public function test_conteudo_ocorrencia_sgp_usa_o_nome_do_servico_quando_nao_ha_observacao(): void
     {
         $service = new SgpService;
