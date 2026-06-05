@@ -119,7 +119,7 @@ class WhatsAppService
             $ordem->sgp_data_nascimento ? 'Data de nascimento: '.$ordem->sgp_data_nascimento->format('d/m/Y') : null,
             $ordem->sgp_cpf_cnpj ? "CPF: {$ordem->sgp_cpf_cnpj}" : null,
             $telefones ? 'Tel :        '.implode('        ', $telefones) : null,
-            $ordem->sgp_plano ? 'Nome do plano '.$this->planoMensagem($ordem->sgp_plano) : null,
+            $ordem->sgp_plano ? 'Nome do plano: '.$this->planoMensagem($ordem->sgp_plano) : null,
             $ordem->sgp_plano ? 'velocidade kbps: '.$this->velocidadeKbps($ordem->sgp_plano) : null,
             '',
             $this->valorPlano($ordem) ? 'Valor do plano: '.$this->valorPlano($ordem) : null,
