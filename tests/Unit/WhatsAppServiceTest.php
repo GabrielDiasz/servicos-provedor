@@ -20,6 +20,60 @@ class WhatsAppServiceTest extends TestCase
         $this->assertSame('52200', $resultado);
     }
 
+    public function test_valor_plano_eh_calculado_localmente_para_300m(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'valorPlano');
+        $method->setAccessible(true);
+
+        $this->assertSame('84,90', $method->invoke($service, '300M'));
+    }
+
+    public function test_valor_plano_trata_600m_como_500m(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'valorPlano');
+        $method->setAccessible(true);
+
+        $this->assertSame('99,90', $method->invoke($service, '600M'));
+    }
+
+    public function test_plano_mensagem_trata_600m_como_500m_na_exibicao(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'planoMensagem');
+        $method->setAccessible(true);
+
+        $this->assertSame('500M', $method->invoke($service, '600M'));
+    }
+
+    public function test_mensagem_dados_cliente_usa_valor_local_do_plano_e_ignora_valor_vindo_do_sgp(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'mensagemDadosCliente');
+        $method->setAccessible(true);
+
+        $ordem = new OrdemServico([
+            'cliente_nome' => 'Cliente Teste',
+            'sgp_plano' => '600M',
+            'sgp_vencimento' => 10,
+            'sgp_dados' => [
+                'contratos' => [[
+                    'valor' => 150,
+                    'valorPlano' => 150,
+                    'plano' => ['valor' => 150],
+                ]],
+            ],
+        ]);
+
+        $mensagem = $method->invoke($service, $ordem);
+
+        $this->assertStringContainsString('Nome do plano: 500M', $mensagem);
+        $this->assertStringContainsString('velocidade kbps: 500200', $mensagem);
+        $this->assertStringContainsString('Valor do plano: 99,90', $mensagem);
+        $this->assertStringNotContainsString('150', $mensagem);
+    }
+
     public function test_telefone_principal_prefere_o_numero_salvo_na_os(): void
     {
         $service = new WhatsAppService;

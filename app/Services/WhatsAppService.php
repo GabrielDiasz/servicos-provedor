@@ -113,6 +113,7 @@ class WhatsAppService
     private function mensagemDadosCliente(OrdemServico $ordem): string
     {
         $telefones = $this->telefonesFormatados($ordem);
+        $valorPlano = $this->valorPlano($ordem->sgp_plano);
 
         return collect([
             "Titular: {$ordem->cliente_nome}",
@@ -122,7 +123,7 @@ class WhatsAppService
             $ordem->sgp_plano ? 'Nome do plano: '.$this->planoMensagem($ordem->sgp_plano) : null,
             $ordem->sgp_plano ? 'velocidade kbps: '.$this->velocidadeKbps($ordem->sgp_plano) : null,
             '',
-            $this->valorPlano($ordem) ? 'Valor do plano: '.$this->valorPlano($ordem) : null,
+            $valorPlano ? 'Valor do plano: '.$valorPlano : null,
             $ordem->sgp_vencimento ? "Vencimento: {$ordem->sgp_vencimento}" : null,
         ])->filter(fn ($linha) => $linha !== null)->implode("\n");
     }
@@ -216,7 +217,9 @@ class WhatsAppService
 
     private function planoMensagem(?string $plano): ?string
     {
-        return $plano ? preg_replace('/\s+/', '', $plano) : null;
+        $planoNormalizado = $this->normalizarPlanoParaExibicao($plano);
+
+        return $planoNormalizado ? preg_replace('/\s+/', '', $planoNormalizado) : null;
     }
 
     private function velocidadeKbps(?string $plano): ?string
@@ -227,6 +230,7 @@ class WhatsAppService
             str_contains($plano, '50') => '52200',
             str_contains($plano, '300') => '310200',
             str_contains($plano, '500') => '500200',
+            str_contains($plano, '600') => '500200',
             str_contains($plano, '700') => '700200',
             default => '',
         };
@@ -280,20 +284,55 @@ class WhatsAppService
         return $telefone ?: null;
     }
 
-    private function valorPlano(OrdemServico $ordem): ?string
+    private function valorPlano(?string $plano): ?string
     {
-        $dados = $ordem->sgp_dados ?? [];
-        $valor = data_get($dados, 'contratos.0.valor')
-            ?? data_get($dados, 'contratos.0.valorPlano')
-            ?? data_get($dados, 'contratos.0.plano.valor')
-            ?? data_get($dados, 'contratoValor')
-            ?? data_get($dados, 'servico_valor');
+        $planoNormalizado = $this->normalizarPlanoParaValor($plano);
 
-        if ($valor === null || $valor === '') {
+        if ($planoNormalizado === null) {
             return null;
         }
 
-        return is_numeric($valor) ? number_format((float) $valor, 2, ',', '') : (string) $valor;
+        return match ($planoNormalizado) {
+            300 => '84,90',
+            500, 600 => '99,90',
+            700 => '119,90',
+            default => null,
+        };
+    }
+
+    private function normalizarPlanoParaValor(?string $plano): ?int
+    {
+        if (! is_string($plano) || trim($plano) === '') {
+            return null;
+        }
+
+        if (! preg_match('/(\d{2,3})/', $plano, $matches)) {
+            return null;
+        }
+
+        $velocidade = (int) $matches[1];
+
+        return match (true) {
+            $velocidade === 600 => 500,
+            in_array($velocidade, [300, 500, 700], true) => $velocidade,
+            default => null,
+        };
+    }
+
+    private function normalizarPlanoParaExibicao(?string $plano): ?string
+    {
+        $planoNormalizado = $this->normalizarPlanoParaValor($plano);
+
+        if ($planoNormalizado === null) {
+            return is_string($plano) ? trim($plano) : null;
+        }
+
+        return match ($planoNormalizado) {
+            300 => '300M',
+            500 => '500M',
+            700 => '700M',
+            default => null,
+        };
     }
 
     private function enderecoSgp(OrdemServico $ordem): ?array

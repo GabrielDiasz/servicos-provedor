@@ -155,7 +155,7 @@ async function autenticarNoSgp(page, baseUrlValue, clienteUrlValue, user, pass, 
     const loginUrl = new URL('/accounts/login/', `${baseUrlValue}/`);
     loginUrl.searchParams.set('next', clienteUrlValue);
 
-    await page.goto(loginUrl.toString(), { waitUntil: 'networkidle2', timeout: timeoutValue });
+    await page.goto(loginUrl.toString(), { waitUntil: 'domcontentloaded', timeout: timeoutValue });
 
     const userSelector = 'input[name="username"]';
     const passwordSelector = 'input[name="password"]';
@@ -295,6 +295,185 @@ async function localizarEndereco(page) {
     });
 }
 
+async function aguardarConteudoEndereco(page, timeout) {
+    await page.waitForFunction(
+        () => document.readyState === 'complete',
+        { timeout }
+    ).catch(() => null);
+
+    await page.evaluate(async () => {
+        const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const elementos = Array.from(document.querySelectorAll('.add_content_sub img, .add_content_sub iframe, .add_content_sub canvas'));
+
+        if (elementos.length === 0) {
+            await wait(1200);
+            return;
+        }
+
+        const aguardando = elementos.map((elemento) => new Promise((resolve) => {
+            const finalizar = () => resolve();
+
+            if (elemento.tagName === 'IMG') {
+                if (elemento.complete && elemento.naturalWidth > 0) {
+                    resolve();
+                    return;
+                }
+
+                elemento.addEventListener('load', finalizar, { once: true });
+                elemento.addEventListener('error', finalizar, { once: true });
+                setTimeout(finalizar, 5000);
+                return;
+            }
+
+            if (elemento.tagName === 'IFRAME') {
+                elemento.addEventListener('load', finalizar, { once: true });
+                setTimeout(finalizar, 7000);
+                return;
+            }
+
+            setTimeout(finalizar, 3000);
+        }));
+
+        await Promise.allSettled([
+            document.fonts?.ready ?? Promise.resolve(),
+            ...aguardando,
+        ]);
+
+        await wait(600);
+    });
+}
+
+async function fecharAnotacaoSeExistir(page, timeout) {
+    const annotationSelector = '.ui-dialog[role="dialog"][aria-describedby="anotacao_message_display"]';
+
+    const annotationVisible = await page.evaluate((selector) => {
+        const element = document.querySelector(selector);
+
+        if (!element) {
+            return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        return rect.width > 0
+            && rect.height > 0
+            && style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && style.opacity !== '0';
+    }, annotationSelector).catch(() => false);
+
+    if (!annotationVisible) {
+        return;
+    }
+
+    const closed = await page.evaluate((selector) => {
+        const normalize = (value = '') => value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+
+        const dialog = document.querySelector(selector)
+            || Array.from(document.querySelectorAll('.ui-dialog[role="dialog"]')).find((element) => {
+                const title = normalize(element.querySelector('.ui-dialog-title')?.textContent || '');
+                const aria = normalize(element.getAttribute('aria-describedby') || '');
+                return title.includes('alerta anotacao') || aria.includes('anotacao_message_display');
+            });
+
+        if (!dialog) {
+            return false;
+        }
+
+        const contentId = dialog.getAttribute('aria-describedby');
+        const content = contentId ? document.getElementById(contentId) : null;
+
+        if (window.jQuery && content) {
+            try {
+                window.jQuery(content).dialog('close');
+                return true;
+            } catch (error) {
+                // segue para os fallbacks abaixo
+            }
+        }
+
+        const closeButton = dialog.querySelector('.ui-dialog-titlebar-close')
+            || dialog.querySelector('button[title="Close"]')
+            || dialog.querySelector('button[title="Fechar"]')
+            || dialog.querySelector('.ui-dialog-buttonpane button')
+            || dialog.querySelector('.ui-dialog-buttonset button');
+
+        if (closeButton) {
+            closeButton.click();
+            return true;
+        }
+
+        return false;
+    }, annotationSelector);
+
+    if (!closed) {
+        throw new Error('Nao foi possivel fechar a anotacao do SGP antes da captura do endereco.');
+    }
+
+        await page.waitForFunction((selector) => {
+            const element = document.querySelector(selector);
+
+        if (!element) {
+            return true;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        return rect.width === 0
+            || rect.height === 0
+            || style.display === 'none'
+            || style.visibility === 'hidden'
+            || style.opacity === '0';
+    }, { timeout }, annotationSelector).catch(() => null);
+
+    await page.evaluate(() => {
+        document.querySelectorAll('.ui-widget-overlay').forEach((element) => element.remove());
+    });
+
+    await page.waitForFunction(() => !document.querySelector('.ui-widget-overlay'), { timeout }).catch(() => null);
+}
+
+async function aguardarAnotacaoEFecharSeExistir(page, timeout) {
+    const annotationSelector = '.ui-dialog[role="dialog"][aria-describedby="anotacao_message_display"]';
+
+    await page.waitForFunction((selector) => {
+        const element = document.querySelector(selector);
+
+        if (!element) {
+            return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        return rect.width > 0
+            && rect.height > 0
+            && style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && style.opacity !== '0';
+    }, { timeout: Math.min(timeout, 2500), polling: 200 }, annotationSelector).catch(() => null);
+
+    const annotationExists = await page.evaluate((selector) => !!document.querySelector(selector), annotationSelector).catch(() => false);
+
+    if (annotationExists) {
+        await fecharAnotacaoSeExistir(page, timeout);
+    }
+}
+
+async function limparModalResidualSgp(page, timeout) {
+    await page.evaluate(() => {
+        document.querySelectorAll('.ui-widget-overlay').forEach((element) => element.remove());
+    }).catch(() => null);
+
+    await page.waitForFunction(() => !document.querySelector('.ui-widget-overlay'), { timeout }).catch(() => null);
+}
+
 async function gerarImagemEnderecoSgp({ baseUrl, clienteUrl, username, password, browserExecutablePath }) {
     const timeout = 90000;
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
@@ -330,8 +509,11 @@ async function gerarImagemEnderecoSgp({ baseUrl, clienteUrl, username, password,
         });
 
         await autenticarNoSgp(page, normalizedBaseUrl, normalizedClienteUrl, username, password, timeout);
-        await page.goto(normalizedClienteUrl, { waitUntil: 'networkidle2', timeout });
-        await new Promise((resolve) => setTimeout(resolve, 700));
+        await page.goto(normalizedClienteUrl, { waitUntil: 'domcontentloaded', timeout });
+        await aguardarAnotacaoEFecharSeExistir(page, timeout);
+        await aguardarConteudoEndereco(page, timeout);
+        await fecharAnotacaoSeExistir(page, timeout);
+        await limparModalResidualSgp(page, timeout);
 
         const clip = await localizarEndereco(page);
 
