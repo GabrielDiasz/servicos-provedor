@@ -293,6 +293,7 @@ class WhatsAppService
         }
 
         return match ($planoNormalizado) {
+            50 => '59,90',
             300 => '84,90',
             500, 600 => '99,90',
             700 => '119,90',
@@ -313,6 +314,7 @@ class WhatsAppService
         $velocidade = (int) $matches[1];
 
         return match (true) {
+            $velocidade === 50 => 50,
             $velocidade === 600 => 500,
             in_array($velocidade, [300, 500, 700], true) => $velocidade,
             default => null,
@@ -328,6 +330,7 @@ class WhatsAppService
         }
 
         return match ($planoNormalizado) {
+            50 => '50M',
             300 => '300M',
             500 => '500M',
             700 => '700M',

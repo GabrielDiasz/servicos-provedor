@@ -29,6 +29,15 @@ class WhatsAppServiceTest extends TestCase
         $this->assertSame('84,90', $method->invoke($service, '300M'));
     }
 
+    public function test_valor_plano_trata_50m_como_plano_local(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'valorPlano');
+        $method->setAccessible(true);
+
+        $this->assertSame('59,90', $method->invoke($service, '50 M'));
+    }
+
     public function test_valor_plano_trata_600m_como_500m(): void
     {
         $service = new WhatsAppService;
@@ -45,6 +54,15 @@ class WhatsAppServiceTest extends TestCase
         $method->setAccessible(true);
 
         $this->assertSame('500M', $method->invoke($service, '600M'));
+    }
+
+    public function test_plano_mensagem_exibe_50m_corretamente(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'planoMensagem');
+        $method->setAccessible(true);
+
+        $this->assertSame('50M', $method->invoke($service, '50 M'));
     }
 
     public function test_mensagem_dados_cliente_usa_valor_local_do_plano_e_ignora_valor_vindo_do_sgp(): void
@@ -71,6 +89,30 @@ class WhatsAppServiceTest extends TestCase
         $this->assertStringContainsString('Nome do plano: 500M', $mensagem);
         $this->assertStringContainsString('velocidade kbps: 500200', $mensagem);
         $this->assertStringContainsString('Valor do plano: 99,90', $mensagem);
+        $this->assertStringNotContainsString('150', $mensagem);
+    }
+
+    public function test_mensagem_dados_cliente_exibe_nome_e_valor_para_plano_50m(): void
+    {
+        $service = new WhatsAppService;
+        $method = new ReflectionMethod($service, 'mensagemDadosCliente');
+        $method->setAccessible(true);
+
+        $ordem = new OrdemServico([
+            'cliente_nome' => 'Cliente Teste',
+            'sgp_plano' => '50 M',
+            'sgp_vencimento' => 10,
+            'sgp_dados' => [
+                'contratos' => [[
+                    'plano' => ['valor' => 150],
+                ]],
+            ],
+        ]);
+
+        $mensagem = $method->invoke($service, $ordem);
+
+        $this->assertStringContainsString('Nome do plano: 50M', $mensagem);
+        $this->assertStringContainsString('Valor do plano: 59,90', $mensagem);
         $this->assertStringNotContainsString('150', $mensagem);
     }
 
