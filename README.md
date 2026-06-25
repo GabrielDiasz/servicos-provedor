@@ -115,6 +115,12 @@ Em outro terminal, deixe o microserviço do WhatsApp ativo:
 node whatsapp-server.js
 ```
 
+Para a fila, use um worker persistente com timeout maior para permitir a captura do print do SGP:
+
+```bash
+php artisan queue:work --queue=default --sleep=3 --tries=3 --timeout=180
+```
+
 ## Testes
 
 ```bash
