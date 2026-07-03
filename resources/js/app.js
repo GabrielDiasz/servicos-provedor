@@ -5,6 +5,7 @@ import flatpickr from 'flatpickr';
 import { Portuguese } from 'flatpickr/dist/l10n/pt.js';
 import './dashboard';
 import './pages/ordens';
+import './pages/upgrade';
 import 'flatpickr/dist/flatpickr.min.css';
 
 window.Alpine = Alpine;

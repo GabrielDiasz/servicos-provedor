@@ -33,6 +33,9 @@
                     <x-nav-link :href="route('ordens.index')" :active="request()->routeIs('ordens.*')">
                         Ordens de Serviço
                     </x-nav-link>
+                    <x-nav-link :href="route('upgrade.index')" :active="request()->routeIs('upgrade.*')">
+                        Upgrade
+                    </x-nav-link>
                     <x-nav-link :href="route('tecnicos.index')" :active="request()->routeIs('tecnicos.*')">
                         Técnicos
                     </x-nav-link>
@@ -155,6 +158,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('ordens.index')" :active="request()->routeIs('ordens.*')">
                 Ordens de Serviço
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('upgrade.index')" :active="request()->routeIs('upgrade.*')">
+                Upgrade
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('tecnicos.index')" :active="request()->routeIs('tecnicos.*')">
                 Técnicos

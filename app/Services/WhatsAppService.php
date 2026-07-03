@@ -8,6 +8,50 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
+    public function enviarMensagemParaTelefone(string $telefone, string $mensagem): bool
+    {
+        if (! config('services.whatsapp.enabled')) {
+            return false;
+        }
+
+        $telefone = preg_replace('/\D+/', '', $telefone);
+
+        if ($telefone === '') {
+            Log::warning('Nao foi possivel enviar a mensagem direta porque o telefone e invalido.');
+
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(config('services.whatsapp.timeout', 10))
+                ->connectTimeout(config('services.whatsapp.connect_timeout', 3))
+                ->when(config('services.whatsapp.token'), fn ($http, $token) => $http->withToken($token))
+                ->post(rtrim(config('services.whatsapp.url'), '/').'/send-message', [
+                    'phone' => $telefone,
+                    'message' => $mensagem,
+                ]);
+
+            if ($response->failed()) {
+                Log::warning('Falha ao enviar mensagem direta pelo WhatsApp.', [
+                    'telefone' => $telefone,
+                    'status' => $response->status(),
+                    'resposta' => $response->json() ?: $response->body(),
+                ]);
+
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::warning('Falha ao enviar mensagem direta pelo WhatsApp.', [
+                'telefone' => $telefone,
+                'erro' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     public function enviarOrdemServico(OrdemServico $ordem): bool
     {
         if (! config('services.whatsapp.enabled')) {

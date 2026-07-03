@@ -48,7 +48,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Bairro *</label>
                         <input type="text" name="bairro" id="bairro" value="{{ old('bairro') }}"
@@ -63,11 +63,10 @@
                                 :selected="old('tipo_servico')"
                                 placeholder="Selecione..."
                                 class="w-full"
+                                required
                             />
                     </div>
-                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Turno *</label>
                         <x-sgp-select
@@ -76,8 +75,12 @@
                                 :selected="old('turno')"
                                 placeholder="Selecione..."
                                 class="w-full"
+                                required
                             />
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Prioridade *</label>
                         <x-sgp-select
@@ -86,12 +89,16 @@
                                 :selected="old('prioridade', 'normal')"
                                 placeholder="Selecione..."
                                 class="w-full"
+                                required
                             />
                     </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Data de Marcação *</label>
-                        <input type="date" name="data_marcacao" value="{{ old('data_marcacao') }}"
+                        <input type="text" name="data_marcacao" value="{{ old('data_marcacao') }}"
+                               data-datepicker
+                               placeholder="Selecionar data"
+                               autocomplete="off"
                                class="app-field w-full"
                                required>
                     </div>
@@ -104,6 +111,7 @@
                                 :selected="old('tecnico_id')"
                                 placeholder="Sem técnico"
                                 class="w-full"
+                                required
                             />
                     </div>
                 </div>

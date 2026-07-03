@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrdemServicoController;
+use App\Http\Controllers\UpgradeController;
 use App\Http\Controllers\TecnicoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WhatsAppGrupoController;
@@ -13,6 +14,14 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('upgrade')->name('upgrade.')->group(function () {
+        Route::get('/', [UpgradeController::class, 'index'])->name('index');
+        Route::post('/importar', [UpgradeController::class, 'importar'])->name('importar');
+        Route::post('/{campaign}/enviar', [UpgradeController::class, 'enviar'])->name('enviar');
+        Route::get('/{campaign}/status', [UpgradeController::class, 'status'])->name('status');
+        Route::delete('/{campaign}', [UpgradeController::class, 'destroy'])->name('destroy');
+    });
 
     Route::post('ordens/{ordem}/enviar-whatsapp', [OrdemServicoController::class, 'enviarWhatsApp'])
         ->name('ordens.enviar-whatsapp');
