@@ -111,7 +111,6 @@
                                 :selected="old('tecnico_id')"
                                 placeholder="Sem técnico"
                                 class="w-full"
-                                required
                             />
                     </div>
                 </div>
