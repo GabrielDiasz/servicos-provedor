@@ -24,20 +24,24 @@ class DashboardController extends Controller
             $inicioMesAnterior = $inicioMes->copy()->subMonthNoOverflow()->startOfMonth();
             $fimMesAnterior = $inicioMes->copy()->subSecond();
 
-            $servicosConcluidosNoMes = OrdemServico::query()
-                ->where('status', 'concluida')
-                ->whereBetween('updated_at', [$inicioMes, $fimMes])
-                ->count();
+            $resumoStatus = OrdemServico::query()
+                ->selectRaw(
+                    '
+                        SUM(CASE WHEN status = ? AND updated_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as concluidas_mes,
+                        SUM(CASE WHEN status = ? AND updated_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as concluidas_mes_anterior,
+                        SUM(CASE WHEN status = ? AND updated_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as passadas_mes
+                    ',
+                    [
+                        'concluida', $inicioMes, $fimMes,
+                        'concluida', $inicioMesAnterior, $fimMesAnterior,
+                        'passada', $inicioMes, $fimMes,
+                    ]
+                )
+                ->first();
 
-            $servicosConcluidosMesAnterior = OrdemServico::query()
-                ->where('status', 'concluida')
-                ->whereBetween('updated_at', [$inicioMesAnterior, $fimMesAnterior])
-                ->count();
-
-            $osPassadasNoMes = OrdemServico::query()
-                ->where('status', 'passada')
-                ->whereBetween('updated_at', [$inicioMes, $fimMes])
-                ->count();
+            $servicosConcluidosNoMes = (int) ($resumoStatus->concluidas_mes ?? 0);
+            $servicosConcluidosMesAnterior = (int) ($resumoStatus->concluidas_mes_anterior ?? 0);
+            $osPassadasNoMes = (int) ($resumoStatus->passadas_mes ?? 0);
 
             $servicosPorTecnico = OrdemServico::query()
                 ->select('tecnico_id', DB::raw('COUNT(*) as total'))
@@ -49,19 +53,17 @@ class DashboardController extends Controller
 
             $tecnicosBase = Tecnico::query()
                 ->where('ativo', true)
-                ->select(['id', 'nome', 'ativo'])
+                ->select(['id', 'nome'])
                 ->orderBy('nome')
                 ->get();
 
             $tecnicos = $tecnicosBase
                 ->map(function (Tecnico $tecnico) use ($servicosPorTecnico) {
-                    $tecnico->servicos_mes = (int) ($servicosPorTecnico[$tecnico->id] ?? 0);
-
                     return [
                         'id' => $tecnico->id,
                         'nome' => $tecnico->nome,
-                        'ativo' => $tecnico->ativo,
-                        'servicos_mes' => $tecnico->servicos_mes,
+                        'ativo' => true,
+                        'servicos_mes' => (int) ($servicosPorTecnico[$tecnico->id] ?? 0),
                     ];
                 })
                 ->sortByDesc('servicos_mes')
@@ -93,8 +95,8 @@ class DashboardController extends Controller
                 ->values()
                 ->all();
 
-            $maiorQuantidadeTecnico = max(collect($tecnicosDesempenho)->pluck('servicos_mes')->max() ?? 0, 1);
-            $maiorQuantidadeTipoConcluido = max(collect($tiposServico)->pluck('total')->max() ?? 0, 1);
+            $maiorQuantidadeTecnico = max(collect($tecnicosDesempenho)->max('servicos_mes') ?? 0, 1);
+            $maiorQuantidadeTipoConcluido = max(collect($tiposServico)->max('total') ?? 0, 1);
             $tecnicosLabels = collect($tecnicosDesempenho)->map(fn (array $tecnico) => $tecnico['nome'])->values()->all();
             $tecnicosValores = collect($tecnicosDesempenho)->map(fn (array $tecnico) => $tecnico['servicos_mes'])->values()->all();
             $tiposLabels = collect($tiposServico)->map(fn (array $tipo) => $tipo['label'])->values()->all();
@@ -149,19 +151,13 @@ class DashboardController extends Controller
             ->pluck('total', 'tecnico_id')
             ->map(fn ($total) => (int) $total);
 
-        $tecnicosBaseHoje = Tecnico::query()
-            ->where('ativo', true)
-            ->select(['id', 'nome', 'ativo'])
-            ->orderBy('nome')
-            ->get();
-
-        $data['tecnicosSobrecarga'] = $tecnicosBaseHoje
-            ->map(function (Tecnico $tecnico) use ($osPassadasHojePorTecnico) {
+        $data['tecnicosSobrecarga'] = $data['tecnicos']
+            ->map(function (array $tecnico) use ($osPassadasHojePorTecnico) {
                 return [
-                    'id' => $tecnico->id,
-                    'nome' => $tecnico->nome,
-                    'ativo' => $tecnico->ativo,
-                    'os_passadas_dia' => (int) ($osPassadasHojePorTecnico[$tecnico->id] ?? 0),
+                    'id' => $tecnico['id'],
+                    'nome' => $tecnico['nome'],
+                    'ativo' => true,
+                    'os_passadas_dia' => (int) ($osPassadasHojePorTecnico[$tecnico['id']] ?? 0),
                 ];
             })
             ->filter(fn (array $tecnico) => $tecnico['os_passadas_dia'] > 4)

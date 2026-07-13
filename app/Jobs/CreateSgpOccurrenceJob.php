@@ -62,9 +62,15 @@ class CreateSgpOccurrenceJob implements ShouldQueue, ShouldBeUnique
             ->findOrFail($this->ordemId);
 
         if ($this->tecnicoIdSnapshot !== null) {
-            $tecnicoSnapshot = Tecnico::query()
-                ->with('whatsappGrupo')
-                ->find($this->tecnicoIdSnapshot);
+            $tecnicoSnapshot = $ordem->tecnico?->id === $this->tecnicoIdSnapshot
+                ? $ordem->tecnico
+                : null;
+
+            if (! $tecnicoSnapshot) {
+                $tecnicoSnapshot = Tecnico::query()
+                    ->with('whatsappGrupo')
+                    ->find($this->tecnicoIdSnapshot);
+            }
 
             if ($tecnicoSnapshot) {
                 $ordem->setRelation('tecnico', $tecnicoSnapshot);

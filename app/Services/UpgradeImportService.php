@@ -36,8 +36,12 @@ class UpgradeImportService
 
     public function importar(UploadedFile $arquivo): array
     {
-        $spreadsheet = IOFactory::load($arquivo->getRealPath());
+        $reader = IOFactory::createReaderForFile($arquivo->getRealPath());
+        $reader->setReadDataOnly(true);
+
+        $spreadsheet = $reader->load($arquivo->getRealPath());
         $sheet = $spreadsheet->getActiveSheet();
+        $sheetName = $sheet->getTitle();
         $rows = $sheet->toArray(null, true, true, true);
 
         if ($rows === [] || count($rows) < 2) {
@@ -84,13 +88,18 @@ class UpgradeImportService
         }
 
         if ($contacts === []) {
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
             throw new RuntimeException('Nenhum cliente valido foi encontrado na planilha.');
         }
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
 
         return [
             'contacts' => $contacts,
             'total' => count($contacts),
-            'sheet_name' => $sheet->getTitle(),
+            'sheet_name' => $sheetName,
         ];
     }
 

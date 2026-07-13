@@ -385,7 +385,7 @@ class OrdemServicoController extends Controller
     private function tecnicosAtivosOrdenados(): Collection
     {
         return Tecnico::query()
-            ->select(['id', 'nome', 'ativo', 'whatsapp_grupo_id'])
+            ->select(['id', 'nome'])
             ->where('ativo', true)
             ->orderBy('nome')
             ->get();

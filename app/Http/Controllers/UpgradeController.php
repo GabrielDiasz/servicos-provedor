@@ -176,7 +176,21 @@ class UpgradeController extends Controller
 
     public function status(UpgradeCampaign $campaign)
     {
-        $campaign->load(['contatos' => fn ($query) => $query->orderBy('linha_planilha')]);
+        $campaign->load([
+            'contatos' => fn ($query) => $query
+                ->select([
+                    'id',
+                    'upgrade_campaign_id',
+                    'linha_planilha',
+                    'primeiro_contato',
+                    'segundo_contato',
+                    'contato_preferido',
+                    'status_envio',
+                    'erro_envio',
+                    'enviado_em',
+                ])
+                ->orderBy('linha_planilha'),
+        ]);
 
         return response()->json([
             'campaign' => [

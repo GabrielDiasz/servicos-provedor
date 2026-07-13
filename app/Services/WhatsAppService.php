@@ -77,13 +77,14 @@ class WhatsAppService
             }
 
             $mensagens = $this->mensagensOrdemServico($ordem);
+            $totalMensagens = count($mensagens);
             $this->workerConsole("OS #{$ordem->id}: enviando mensagens de texto no WhatsApp.", [
-                'total' => count($mensagens),
+                'total' => $totalMensagens,
             ]);
 
             foreach ($mensagens as $index => $mensagem) {
                 $passo = $index + 1;
-                $this->workerConsole("OS #{$ordem->id}: enviando mensagem {$passo}/".count($mensagens).'.');
+                $this->workerConsole("OS #{$ordem->id}: enviando mensagem {$passo}/{$totalMensagens}.");
 
                 $response = Http::timeout(config('services.whatsapp.timeout', 10))
                     ->connectTimeout(config('services.whatsapp.connect_timeout', 3))
@@ -101,7 +102,7 @@ class WhatsAppService
                         'resposta' => $response->json() ?: $response->body(),
                     ]);
 
-                    $this->workerConsole("OS #{$ordem->id}: falha ao enviar a mensagem {$passo}/".count($mensagens).'.', [
+                    $this->workerConsole("OS #{$ordem->id}: falha ao enviar a mensagem {$passo}/{$totalMensagens}.", [
                         'status' => $response->status(),
                     ], true);
 
@@ -149,7 +150,7 @@ class WhatsAppService
         return collect([
             $login,
             $ordem->sgp_pppoe_senha,
-            $this->mensagemCtoPorta($ordem),
+            $mensagemCtoPorta,
             $this->telefonePrincipal($ordem),
         ])->filter()->values()->all();
     }
@@ -157,15 +158,16 @@ class WhatsAppService
     private function mensagemDadosCliente(OrdemServico $ordem): string
     {
         $telefones = $this->telefonesFormatados($ordem);
-        $valorPlano = $this->valorPlano($ordem->sgp_plano);
+        $plano = $ordem->sgp_plano;
+        $valorPlano = $this->valorPlano($plano);
 
         return collect([
             "Titular: {$ordem->cliente_nome}",
             $ordem->sgp_data_nascimento ? 'Data de nascimento: '.$ordem->sgp_data_nascimento->format('d/m/Y') : null,
             $ordem->sgp_cpf_cnpj ? "CPF: {$ordem->sgp_cpf_cnpj}" : null,
             $telefones ? 'Tel :        '.implode('        ', $telefones) : null,
-            $ordem->sgp_plano ? 'Nome do plano: '.$this->planoMensagem($ordem->sgp_plano) : null,
-            $ordem->sgp_plano ? 'velocidade kbps: '.$this->velocidadeKbps($ordem->sgp_plano) : null,
+            $plano ? 'Nome do plano: '.$this->planoMensagem($plano) : null,
+            $plano ? 'velocidade kbps: '.$this->velocidadeKbps($plano) : null,
             '',
             $valorPlano ? 'Valor do plano: '.$valorPlano : null,
             $ordem->sgp_vencimento ? "Vencimento: {$ordem->sgp_vencimento}" : null,
